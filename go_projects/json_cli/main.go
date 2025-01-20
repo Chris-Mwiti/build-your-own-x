@@ -40,8 +40,8 @@ func main(){
 		StringValue string `json:"stringValue"`
 		DateValue time.Time `json:"dateValue"`
 		ObjectValue *myObject `json:"objectValue"`
-		NullIntValue *int `json:"nullIntValue,omitempty`
-		NullStringValue *string `json:"nullStringValue" ,omitempty"`
+		NullIntValue *int `json:"nullIntValue,omitempty"`
+		NullStringValue *string `json:"nullStringValue,omitempty"`
 	}
 	 
 	structData := &myStruct{
