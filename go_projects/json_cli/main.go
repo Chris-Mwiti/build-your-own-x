@@ -6,6 +6,22 @@ import (
 	"time"
 )
 
+type myStruct struct {
+	IntValue int `json:"intValue"` 
+	BoolValue bool `json:"booValue"`
+	StringValue string `json:"stringValue"`
+	DateValue time.Time `json:"dateValue"`
+	ObjectValue *myObject `json:"objectValue"`
+	NullIntValue *int `json:"nullIntValue,omitempty"`
+	NullStringValue *string `json:"nullStringValue,omitempty"`
+}
+
+type myObject struct {
+	ArrayValue []int `json:"arrayValue"`
+}
+		
+
+
 func main(){
 	//map marshaling to json
 	data := map[string]interface{} {
@@ -31,18 +47,6 @@ func main(){
 	var ptrInt *int = &myInt
 
 	//struct marshaling 
-	type myObject struct {
-		ArrayValue []int `json:"arrayValue"`
-	}
-	type myStruct struct {
-		IntValue int `json:"intValue"` 
-		BoolValue bool `json:"booValue"`
-		StringValue string `json:"stringValue"`
-		DateValue time.Time `json:"dateValue"`
-		ObjectValue *myObject `json:"objectValue"`
-		NullIntValue *int `json:"nullIntValue,omitempty"`
-		NullStringValue *string `json:"nullStringValue,omitempty"`
-	}
 	 
 	structData := &myStruct{
 		IntValue: 1235,
@@ -58,4 +62,7 @@ func main(){
 	structJsonData, err := json.Marshal(structData)
 	fmt.Printf("json data: %s\n", jsonData)
 	fmt.Printf("struct json data: %s\n", structJsonData)
+
+	//Invokation of the parsing method
+	parsing()
 }
