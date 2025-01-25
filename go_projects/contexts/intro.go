@@ -35,4 +35,7 @@ func main() {
 	ctx = context.Background()
 	ctx = context.WithValue(ctx, "myKey", "myValue")
 	doSomething(ctx)
+
+	//example of ending a context using withCancel
+	ending()
 }
