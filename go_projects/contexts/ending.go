@@ -32,14 +32,14 @@ func endingSomething(ctx context.Context) {
 
 	for num := 1; num <= 3; num++ {
 		select {
-		case <- ctx.Done():
+		case <- deadlineCtx.Done():
 			break
 		//pipe the num value to the printCh channel
 		case printCh <- num:
 			//the thread to sleep for 1 second be resuming with execution
 			time.Sleep(2 * time.Second)
 		}
-}
+	}
 
 	deadlineCancelCtx()
 
