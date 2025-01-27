@@ -16,7 +16,7 @@ func endingSomething(ctx context.Context) {
 	//ctx, cancelCtx := context.WithCancel(ctx) 
 	
 	//Ending a context with a deadline
-	deadline := time.Now().Add(1500 * time.Millisecond);
+	deadline := time.Now().Add(3500 * time.Millisecond);
 	deadlineCtx, deadlineCancelCtx := context.WithDeadline(ctx, deadline)
 
 	defer deadlineCancelCtx()
@@ -32,14 +32,14 @@ func endingSomething(ctx context.Context) {
 
 	for num := 1; num <= 3; num++ {
 		select {
+		case <- ctx.Done():
+			break
 		//pipe the num value to the printCh channel
 		case printCh <- num:
 			//the thread to sleep for 1 second be resuming with execution
-			time.Sleep(1 * time.Second)
-		case <- ctx.Done():
-			break
+			time.Sleep(2 * time.Second)
 		}
-	}
+}
 
 	deadlineCancelCtx()
 
