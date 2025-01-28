@@ -32,6 +32,7 @@ func scanGitFolders(folders []string, folder string) []string {
 
 	//Recursively go through the folder and check whether it contains any .git files and if replace the current path with the found git path
 	for _, file := range files {
+		fmt.Printf("The following is the file name: %s\n", file.Name())
 		if file.IsDir() {
 			path = folder + "/" + file.Name()
 			if file.Name() == ".git" {
