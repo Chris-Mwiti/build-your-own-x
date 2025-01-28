@@ -30,4 +30,10 @@ func main(){
 	
 	//4. Channels Select
 	SelectChannel()
+
+	//5. Channels Timeouts
+	ChannelTimouts()
+
+	//6. Channel non blocking operations
+	ChannelNonBlocking()
 }
