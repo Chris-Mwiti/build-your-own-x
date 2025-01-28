@@ -9,6 +9,7 @@ func ChannelNonBlocking(){
 	messages := make(chan string)
 	signals := make(chan string)
 
+	//default prevents blocking of a channel
 	select {
 	case message := <- messages:
 		fmt.Printf("It can all be yours chris: %s\n", message)
