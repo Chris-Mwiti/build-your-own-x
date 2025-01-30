@@ -36,4 +36,10 @@ func main(){
 
 	//6. Channel non blocking operations
 	ChannelNonBlocking()
+
+	//7. Channel closing operations
+	ChannelClosing()
+
+	//8. Ranging over channels data
+	ChannelRange()
 }
