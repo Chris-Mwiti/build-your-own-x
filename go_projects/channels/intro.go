@@ -42,4 +42,7 @@ func main(){
 
 	//8. Ranging over channels data
 	ChannelRange()
+
+	//9. Workerpools
+	WorkerPools()
 }
