@@ -45,4 +45,10 @@ func main(){
 
 	//9. Workerpools
 	WorkerPools()
+
+	//10. WaitGroups
+	WaitGroup()
+
+	//11. Rate Limiter
+	RateLimiter()
 }
