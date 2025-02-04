@@ -1,11 +1,11 @@
 package main
 
 import (
-//	"errors"
+	// "errors"
 	"fmt"
 	"io"
 	"net/http"
-	//"os"
+	// "os"
 )
 
 const ( keyServerAddr= "serverAddr" )
@@ -14,7 +14,14 @@ const ( keyServerAddr= "serverAddr" )
 func getRoot(res http.ResponseWriter, req *http.Request){
 	//get the context for the current reqeust made
 	ctx := req.Context()
-	fmt.Printf("%s :got /request\n", ctx.Value(keyServerAddr))
+
+	//check whether the url has a query
+	hasFirst := req.URL.Query().Has("first")
+	first := req.URL.Query().Get("first")
+	hasSecond := req.URL.Query().Has("second")
+	second := req.URL.Query().Get("second")
+
+	fmt.Printf("%s : got / request. first(%t)=%s, second(%t)=%s", ctx.Value(keyServerAddr), hasFirst, first, hasSecond, second)
 	io.WriteString(res, "Welcome to the home page of my website")
 }
 
@@ -25,7 +32,7 @@ func getHello(res http.ResponseWriter, req *http.Request){
 }
 
 func main(){
-	//handler func for the "/" route
+	//handler func .for the "/" route
 	// http.HandleFunc("/", getRoot)
 
 	// //handler func for the "/hello" route
