@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	// "os"
 )
 
 const ( keyServerAddr= "serverAddr" )
@@ -18,10 +17,19 @@ func getRoot(res http.ResponseWriter, req *http.Request){
 	//check whether the url has a query
 	hasFirst := req.URL.Query().Has("first")
 	first := req.URL.Query().Get("first")
+	fmt.Printf("The following is the value of first:%s", first)
 	hasSecond := req.URL.Query().Has("second")
 	second := req.URL.Query().Get("second")
 
-	fmt.Printf("%s : got / request. first(%t)=%s, second(%t)=%s", ctx.Value(keyServerAddr), hasFirst, first, hasSecond, second)
+
+	//extraction of body query
+	body, err := io.ReadAll(req.Body)
+	if err != nil {
+		fmt.Printf("could not read body: %s\n", err)
+	}
+
+
+	fmt.Printf("%s : got / request. first(%t)=%s, second(%t)=%s\n, body:\n%s\n", ctx.Value(keyServerAddr), hasFirst, first, hasSecond, second, body)
 	io.WriteString(res, "Welcome to the home page of my website")
 }
 
