@@ -72,4 +72,7 @@ func main(){
 
 	//2. Spinning up the mutex server
 	MutexServer()
+
+	//3. Spinning up a request server
+	RequestServer()	
 }
