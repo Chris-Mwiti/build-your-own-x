@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"os"
@@ -23,6 +24,7 @@ func RequestServer(){
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request){
 		reqCtx := r.Context()
 		fmt.Printf("server: %s \n : port = %s", r.Method, reqCtx.Value("keyServerAddr"))
+		fmt.Fprintf(w, `{"message": "hello!"}`)
 	})
 
 	server := http.Server{
@@ -53,15 +55,38 @@ func RequestServer(){
 	//creation of client instance
 	requestURL := fmt.Sprintf("http://localhost:%d", serverPort)
 	//making an actual request to the url
-	res, err := http.Get(requestURL)
+	//res, err := http.Get(requestURL)
 
+	//making  a request using http.NewRequest to have more control over the request
+	req, err := http.NewRequest(http.MethodGet, requestURL, nil)
 	if err != nil {
 		fmt.Printf("error making http request: %s\n", err)
 		//exit the system
 		os.Exit(1)
 	}
 
+	//creation of a respond client
+	//the http.DefaultClient.Do is used to call a request from a predefined request 
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		fmt.Printf("client: error making http request: %s\n", err)
+		os.Exit(1)
+	}
+
 	fmt.Printf("client: got response!\n")
 	fmt.Printf("client: status code: %d\n", res.StatusCode)
 
+
+	//read all the response body
+	resBody, err := io.ReadAll(res.Body)
+	if err != nil {
+		fmt.Printf("client: could not read response body: %s\n", err)
+		os.Exit(1)
+	}
+	fmt.Printf("client: response body: %s\n", resBody)
+
+
+
+	//POST REQUEST
+	
 }

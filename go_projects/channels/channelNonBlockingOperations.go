@@ -20,7 +20,7 @@ func ChannelNonBlocking(){
 	msg := "Hello this is about creating non blocking operations"
 	select {
 	case messages <- msg:
-		fmt.Printf("Well a message has been sent:%s\n", &messages)
+		fmt.Printf("Well a message has been sent:%s\n", msg)
 	default: 
 		fmt.Println("no messages have been sent")
 	}

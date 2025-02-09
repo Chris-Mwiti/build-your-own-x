@@ -69,10 +69,11 @@ func main(){
 	// 	os.Exit(1)
 	// }
 
+	//3. Spinning up a request server
+	RequestServer()	
+
 
 	//2. Spinning up the mutex server
 	MutexServer()
 
-	//3. Spinning up a request server
-	RequestServer()	
 }
