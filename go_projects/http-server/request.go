@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -8,6 +9,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -20,10 +22,34 @@ func RequestServer(){
 	actualCtx := context.Background()
 	//creation of new mux handler
 	mux := http.NewServeMux()
-	
+
+	//GET REQUEST MUX HANDLER
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request){
 		reqCtx := r.Context()
 		fmt.Printf("server: %s \n : port = %s", r.Method, reqCtx.Value("keyServerAddr"))
+		fmt.Fprintf(w, `{"message": "hello!"}`)
+	})
+
+	//POST REQUEST MUX HANDLER
+	mux.HandleFunc("/post", func (w http.ResponseWriter, r *http.Request){
+		//print the method type
+		fmt.Printf("server: %s/\n", r.Method)
+		fmt.Printf("server: query id: %s\n", r.URL.Query().Get("id"))
+		fmt.Printf("server: content-type: %s\n", r.Header.Get("content-type"))
+
+		//headers
+		fmt.Printf("server: headers:\n")
+		for headerName, headerValue := range r.Header {
+			fmt.Printf("\t%s = %s\n", headerName, strings.Join(headerValue, ", "))
+		}
+
+		//read all the content type in the body request
+		reqBody, err := io.ReadAll(r.Body)
+		if err != nil {
+			fmt.Printf("server: could not read the body content type")
+		}
+		fmt.Printf("server: request body: %s\n", reqBody)
+
 		fmt.Fprintf(w, `{"message": "hello!"}`)
 	})
 
@@ -52,13 +78,15 @@ func RequestServer(){
 
 	time.Sleep(100 * time.Millisecond)
 
+	jsonBody := []byte(`{"client_message": "hello, server!"}`)
+	bodyReader := bytes.NewReader(jsonBody)
 	//creation of client instance
-	requestURL := fmt.Sprintf("http://localhost:%d", serverPort)
+	requestURL := fmt.Sprintf("http://localhost:%d?id=1234", serverPort)
 	//making an actual request to the url
 	//res, err := http.Get(requestURL)
 
 	//making  a request using http.NewRequest to have more control over the request
-	req, err := http.NewRequest(http.MethodGet, requestURL, nil)
+	req, err := http.NewRequest(http.MethodPost, requestURL, bodyReader)
 	if err != nil {
 		fmt.Printf("error making http request: %s\n", err)
 		//exit the system
@@ -88,5 +116,4 @@ func RequestServer(){
 
 
 	//POST REQUEST
-	
 }
