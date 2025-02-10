@@ -13,6 +13,11 @@ type PlayinCard struct {
 	Rank string
 }
 
+type Card interface {
+	fmt.Stringer
+	Name() string
+}
+
 type TradingCard struct {
 	CollectableName string
 }
@@ -25,6 +30,10 @@ func NewTradingCard(collectableName string) *TradingCard{
 
 func (tc *TradingCard) String() string{
 	 return tc.CollectableName
+}
+
+func(tc *TradingCard) Name() string {
+	return tc.String()
 }
 
 //func that creates a new card and returns a pointer to it
@@ -42,11 +51,14 @@ func (pc *PlayinCard) String() string {
 	return fmt.Sprintf("%s of %s", pc.Rank, pc.Suit)
 }
 
+func(pc *PlayinCard) Name() string {
+	return pc.Name()
+}
 
 
 //defination of the deck structure
 //reconfigure the deck to support the generic strucure
-type Deck [C any] struct {
+type Deck [C Card] struct {
 	cards []C
 }
 
