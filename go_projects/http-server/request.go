@@ -51,6 +51,9 @@ func RequestServer(){
 		fmt.Printf("server: request body: %s\n", reqBody)
 
 		fmt.Fprintf(w, `{"message": "hello!"}`)
+
+		//timeout simulation
+		time.Sleep(35 * time.Second)
 	})
 
 	server := http.Server{
@@ -81,7 +84,7 @@ func RequestServer(){
 	jsonBody := []byte(`{"client_message": "hello, server!"}`)
 	bodyReader := bytes.NewReader(jsonBody)
 	//creation of client instance
-	requestURL := fmt.Sprintf("http://localhost:%d?id=1234", serverPort)
+	requestURL := fmt.Sprintf("http://localhost:%d/post?id=1234", serverPort)
 	//making an actual request to the url
 	//res, err := http.Get(requestURL)
 
@@ -93,9 +96,18 @@ func RequestServer(){
 		os.Exit(1)
 	}
 
+	//customization of the request headers
+	req.Header.Set("Content-Type", "application/json")
+
+
+	//creation of customizable response client
+	client := http.Client{
+		//add a timeout to prevent response hanging
+		Timeout: 30 * time.Second,
+	}
 	//creation of a respond client
 	//the http.DefaultClient.Do is used to call a request from a predefined request 
-	res, err := http.DefaultClient.Do(req)
+	res, err := client.Do(req)
 	if err != nil {
 		fmt.Printf("client: error making http request: %s\n", err)
 		os.Exit(1)
