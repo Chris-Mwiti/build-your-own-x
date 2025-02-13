@@ -11,10 +11,10 @@ import (
 func main(){
 	//instatiate the cmd struct
 	var cmd = &cobra.Command{
-		Use: "blockchain",
+		Use: "blckCmd",
 		Short: "The blockchain cli",
 		Run: func(cmd *cobra.Command, args []string) {
-
+			fmt.Println("Running a blockchain command")
 		},
 	}
 
