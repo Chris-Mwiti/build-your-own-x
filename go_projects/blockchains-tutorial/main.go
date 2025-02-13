@@ -132,7 +132,7 @@ func (state *State) Persist() error {
 		}
 
 		//Remove the TX written to a file from the mempool
-		state.txMempool = state.txMempool[1:]
+		state.txMempool = state.txMempool[i:]
 	}
 
 	return nil
@@ -144,7 +144,7 @@ func (state *State) apply(tx Tx) error {
 		state.Balances[tx.To] += tx.Value
 	}
 
-	//
+	//check if the account is insufficient
 	if tx.Value > state.Balances[tx.From] {
 		return fmt.Errorf("insufficient balance")
 	}
