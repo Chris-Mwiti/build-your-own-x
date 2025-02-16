@@ -45,6 +45,18 @@ type State struct {
 	dbFile *os.File
 }
 
+
+func loadGenesis(filepath string) (gen *State, err error) {
+	fd, err := os.OpenFile(filepath, os.O_RDWR|os.O_APPEND, 0755)
+
+	//create a 
+	return &State{
+		Balances: [],
+		txMempool: &Tx{}[],
+		dbFile: ,
+	}
+}
+
 func NewStateFromDisk() (*State, error) {
 	//get the current working directory
 	cwd, err := os.Getwd()
