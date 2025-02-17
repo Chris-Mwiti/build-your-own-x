@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 )
@@ -49,12 +50,31 @@ type State struct {
 func loadGenesis(filepath string) (gen *State, err error) {
 	fd, err := os.OpenFile(filepath, os.O_RDWR|os.O_APPEND, 0755)
 
-	//create a 
-	return &State{
-		Balances: [],
-		txMempool: &Tx{}[],
-		dbFile: ,
+	if err != nil {
+		log.Fatal(err)
 	}
+
+	scanner := bufio.NewScanner(fd)
+	for scanner.Scan(){
+		if err := scanner.Err(); err != nil {
+			log.Fatal(err)
+		}
+	}
+
+
+	//unmarshal the json data to a the data var
+	var data State
+	jsonErr := json.Unmarshal(scanner.Bytes(), &data)
+	if jsonErr != nil {
+		log.Fatal(jsonErr)
+	}
+
+	fmt.Printf("The following is the data captured %v", data)
+	return &State{
+		Balances: data.Balances,
+		txMempool: data.txMempool ,
+		dbFile: data.dbFile,
+	}, nil
 }
 
 func NewStateFromDisk() (*State, error) {

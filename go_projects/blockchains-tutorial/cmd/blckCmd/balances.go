@@ -1,11 +1,11 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"github.com/spf13/cobra"
 )
 
+//loading the latest DB state and printing it to the standard output
 func balancesListCmd() *cobra.Command{
 	var balancesListCmd = &cobra.Command{
 		Use: "list",
@@ -15,6 +15,11 @@ func balancesListCmd() *cobra.Command{
 		 
 		},
 	}
+	return balancesListCmd
+}
+
+func incorrectUsageErr(error string){
+	fmt.Printf("Incorrect usage: %s",error)
 }
 
 func balancesCmd() *cobra.Command {
@@ -26,10 +31,10 @@ func balancesCmd() *cobra.Command {
 			return incorrectUsageErr() 
 		},
 		Run: func(cmd *cobra.Command, args []string){
-			fmt.Printf("Running the balances cmd")
+			
 		},
 	}
 
-	balancesCmd.AddCommand(balancesListCmd)
+	balancesCmd.AddCommand(balancesListCmd())
 	return balancesCmd
 }
