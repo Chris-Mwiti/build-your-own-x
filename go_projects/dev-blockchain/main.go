@@ -13,7 +13,8 @@ type Block struct {
 	PrevBlockHash []byte
 	Hash []byte
 	Timestamp int64
-	Data *Tx 
+	Data *Tx
+	Nounce int
 }
 
 
@@ -48,9 +49,14 @@ func NewBlock(data string, prevBlockHash []byte) *Block {
 		},
 		PrevBlockHash: prevBlockHash,
 		Hash: []byte{},
+		Nounce:0,
 	}
 
-	block.SetHash()
+	pow := NewProofOfWork(block)
+	nonce, hash := pow.Run()
+	block.Hash = hash[:]
+	block.Nounce = nonce
+
 	return block
 }
 
