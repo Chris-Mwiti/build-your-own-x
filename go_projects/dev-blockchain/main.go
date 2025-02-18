@@ -53,6 +53,7 @@ func NewBlock(data string, prevBlockHash []byte) *Block {
 	}
 
 	pow := NewProofOfWork(block)
+	//run to capture the hash and set it to the headers
 	nonce, hash := pow.Run()
 	block.Hash = hash[:]
 	block.Nounce = nonce
@@ -85,9 +86,11 @@ func main(){
 	chain.AddBlock("Second member to join the chain")
 	
 	for _, block := range chain.blocks {
+		pow := NewProofOfWork(block)
 		fmt.Printf("Prev. hash: %x\n", block.PrevBlockHash)	
 		fmt.Printf("Data: %s\n", block.Data.Data)
 		fmt.Printf("Hash: %x\n", block.Hash)
+		fmt.Printf("POW: %s\n", strconv.FormatBool(pow.Validate()))
 		fmt.Println()
 	}
 }
