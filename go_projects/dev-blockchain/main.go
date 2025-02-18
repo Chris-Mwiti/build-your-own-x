@@ -4,8 +4,11 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"fmt"
+	"log"
 	"strconv"
 	"time"
+
+	"github.com/boltdb/bolt"
 )
 
 //block -> store valuable information...
@@ -24,7 +27,11 @@ type Tx struct {
 }
 
 type Blockchain struct {
-	blocks []*Block
+	//holds the current hash of the block in the chain
+	tip []byte
+
+	//store the db connection...used to maintain a connection while the program is running
+	db *bolt.DB
 }
 
 //creation of hashes of blocks...This is will be used to keep track of blocks
@@ -64,9 +71,34 @@ func NewBlock(data string, prevBlockHash []byte) *Block {
 //Add a new block to the chain
 func (bc *Blockchain) AddBlock(data string){
 	//get the last block added in the chain
-	prevBlock := bc.blocks[len(bc.blocks)-1]
-	newBlock := NewBlock(data, prevBlock.Hash)
-	bc.blocks = append(bc.blocks, newBlock)
+	var lastHash []byte
+	
+	err := bc.db.View(func(tx *bolt.Tx) error{
+		//fetch the blocks buckte and the last block in the chain
+		b := tx.Bucket([]byte(blocksBucket))
+		lastHash = b.Get([]byte("l"))
+
+		return nil
+	})
+
+	//create a new block with the fetched lastHash
+	newBlock := NewBlock(data, lastHash)
+
+	err = bc.db.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(blocksBucket))
+		err := b.Put(newBlock.Hash,newBlock.Serialze())
+		if err != nil {
+			log.Panic(err)
+		}
+
+		err = b.Put([]byte("l"), newBlock.Hash)
+		if err != nil {
+			log.Panic(err)
+		}
+		bc.tip = newBlock.Hash
+
+		return nil
+	})
 }
 
 

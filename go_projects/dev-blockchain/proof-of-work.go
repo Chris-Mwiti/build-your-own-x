@@ -108,3 +108,4 @@ func (pow *ProofOfWork) Validate() bool {
 
 	return isValid
 }
+
