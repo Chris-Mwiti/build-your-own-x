@@ -1,4 +1,4 @@
-package main
+package blockchain
 
 import (
 	"bytes"
@@ -50,9 +50,13 @@ func DeserialzeBlock(d []byte) *Block {
 }
 
 func BlockChainWithDb() *Blockchain {
-	//set the tip pointer of the current block
+	//set the Tip pointer of the current block
 	var tip []byte
 	db,err := bolt.Open(dbFile, 0600, nil)
+
+	if err != nil {
+		log.Panic(err)
+	}
 
 	err = db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(blocksBucket))
@@ -86,19 +90,24 @@ func BlockChainWithDb() *Blockchain {
 	//create a db connected blockchain with the 
 	//current and latest block hash & ongoing the db connection
 	bc := Blockchain{
-		tip: tip,	
-		db: db,	
+		Tip: tip,	
+		Db: db,	
 	}
 
 	return &bc
 }
 
 func (bc *Blockchain) Iterator() *BlockchainIterator {
-	bci := &BlockchainIterator{bc.tip, bc.db}
+	//the Tip of a blockchain...from the top to the bottom...newest to the oldest
+	bci := &BlockchainIterator{
+		currentHash: bc.Tip,
+		db: bc.Db,
+	}
 
 	return bci
 }
 
+//@todo: Research on when do we know we have reached the final block in the chain
 func (i *BlockchainIterator) Next() (*Block, error) {
 	var block *Block
 	
@@ -106,8 +115,8 @@ func (i *BlockchainIterator) Next() (*Block, error) {
 		b := tx.Bucket([]byte(blocksBucket))
 		//perfoms a get operation for the current block in the chain
 		//deserialize the block from the bytes array to block struct
-		encodedBlock := b.Get(i.currentHash)
-		block = DeserialzeBlock(encodedBlock)
+		encodedblock := b.Get(i.currentHash)
+		block = DeserialzeBlock(encodedblock)
 
 		return nil
 	})
@@ -115,7 +124,9 @@ func (i *BlockchainIterator) Next() (*Block, error) {
 	if err != nil {
 		return nil,err
 	}
-	
+
+	//set the iterator current Hash block pointer..
+	//to the prevBlock in the chain
 	i.currentHash = block.PrevBlockHash
 
 	return block,nil
