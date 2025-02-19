@@ -108,7 +108,7 @@ func NewGenesisBlock() *Block {
 }
 //creates a new blockchain with the actual blockchain
 func NewBlockchain() *Blockchain {
-	return &Blockchain{[]*Block{NewGenesisBlock()}}
+	return BlockChainWithDb()
 }
 
 func main(){
@@ -117,12 +117,22 @@ func main(){
 	chain.AddBlock("First member to join the chain")
 	chain.AddBlock("Second member to join the chain")
 	
-	for _, block := range chain.blocks {
-		pow := NewProofOfWork(block)
-		fmt.Printf("Prev. hash: %x\n", block.PrevBlockHash)	
-		fmt.Printf("Data: %s\n", block.Data.Data)
-		fmt.Printf("Hash: %x\n", block.Hash)
-		fmt.Printf("POW: %s\n", strconv.FormatBool(pow.Validate()))
-		fmt.Println()
+	//current hash in the block 
+
+	for {
+
+		nextBlck, err := chain.Iterator().Next()
+
+		currBlck := chain.Iterator().currentHash	
+		nextBlckHash := nextBlck.Hash
+		
+		if err != nil {
+			break
+		}
+
+		fmt.Printf("Current Block: %x\n", currBlck)
+		fmt.Printf("Next block: %x\n", nextBlckHash)
 	}
+
+
 }

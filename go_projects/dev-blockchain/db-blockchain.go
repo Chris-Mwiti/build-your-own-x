@@ -49,7 +49,7 @@ func DeserialzeBlock(d []byte) *Block {
 	return &block
 }
 
-func NewBlockchainDb() *Blockchain {
+func BlockChainWithDb() *Blockchain {
 	//set the tip pointer of the current block
 	var tip []byte
 	db,err := bolt.Open(dbFile, 0600, nil)
@@ -99,7 +99,7 @@ func (bc *Blockchain) Iterator() *BlockchainIterator {
 	return bci
 }
 
-func (i *BlockchainIterator) Next() *Block {
+func (i *BlockchainIterator) Next() (*Block, error) {
 	var block *Block
 	
 	err := i.db.View(func (tx *bolt.Tx) error {
@@ -111,9 +111,13 @@ func (i *BlockchainIterator) Next() *Block {
 
 		return nil
 	})
+
+	if err != nil {
+		return nil,err
+	}
 	
 	i.currentHash = block.PrevBlockHash
 
-	return block
+	return block,nil
 
 }
