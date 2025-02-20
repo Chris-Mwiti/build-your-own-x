@@ -27,7 +27,7 @@ func (cli *Cli) Run(){
 
 	//loop over the args and check for the commands
 	switch os.Args[1] {
-	case "addBlock":
+	case "addblock":
 		err := addBlockCmd.Parse((os.Args[2:]))
 		if err != nil {
 			log.Fatal(err)
