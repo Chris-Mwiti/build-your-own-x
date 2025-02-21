@@ -68,7 +68,7 @@ func (cli *Cli) addBlock(data string) {
 func (cli *Cli) printChain() {
 	bci := cli.Bc.Iterator()
 
-
+	//iterates through the block in the chain
 	for {
 		block, err := bci.Next()
 
