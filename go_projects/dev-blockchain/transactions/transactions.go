@@ -38,6 +38,7 @@ type TxInput struct {
     ScriptSig string //provides data to be used in the ScriptPubKey ...if data is correct, the output can be unlocked, and its value can be used to generate new outputs 
 }
 
+//genesis block data
 const GenesisCoinbaseData = "This is the first block created in the blockchain"
 
 func (tx *Transaction) SetID(){
