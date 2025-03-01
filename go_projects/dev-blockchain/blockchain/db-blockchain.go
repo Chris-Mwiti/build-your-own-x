@@ -1,12 +1,20 @@
 package blockchain
 
 import (
-	"bytes"
-	"encoding/gob"
+	"fmt"
 	"log"
-	"github.com/boltdb/bolt"
+	"os"
 	"github.com/Chris-Mwiti/build-your-own-x/go-projects/dev-blockchain/transactions"
+	"github.com/boltdb/bolt"
 )
+
+type Blockchain struct {
+	//holds the current hash of the block in the chain
+	Tip []byte
+
+	//store the Db connection...used to maintain a connection while the program is running
+	Db *bolt.DB
+}
 
 //blockchain iterator type
 type BlockchainIterator struct {
@@ -14,54 +22,30 @@ type BlockchainIterator struct {
 	db *bolt.DB
 }
 
+
 const dbFile = "databases/blocks.db"
 
 //holds the key value pairs of the blocks
 const blocksBucket = "blocksBucket"
 
-//serialization of the block into a byte array a format that can be stored
-//in the boltdb
-func (b *Block) Serialze() []byte {
-	//create a new buffer that will store the bytes array
-	var result bytes.Buffer
 
-	//create a new encoder that will encode the data into byte array
-	encoder := gob.NewEncoder(&result)
-
-	err := encoder.Encode(b)
-
-	//check if the transmitted is a nil pointer
-	if err != nil {
-		log.Panic(err)
+//utility func to check if a db exists
+func dbExists() bool {
+	if _, err := os.Stat(dbFile); os.IsNotExist(err) {
+		return false
 	}
 
-	return result.Bytes()
+	return true
 }
 
-//deserialize func that will revert the byte array into a *Block struct
-//this will be an independent function
-func DeserialzeBlock(d []byte) *Block {
-	var block Block
 
-	//init a new decoder 
-	decoder := gob.NewDecoder(bytes.NewReader(d))
-	decoder.Decode(&block)
-
-	return &block
-}
-
-//this function is used to create the first block in the blockchain
-func CreateBlockchain(address string) *Block {
-	//create a coinbase contex of the genesis block
-	cbtx := transactions.NewCoinbaseTX(address, transactions.GenesisCoinbaseData);
-	
-	//creation of the first genesis block of the chain
-	genesis := NewGenesisBlock(cbtx);
-
-	return genesis
-}
-
+//creation of a blockchain with db
 func BlockChainWithDb(address string) *Blockchain {
+
+	if dbExists() == false {
+		fmt.Println("No existing blockchain found. Create one first.")
+		os.Exit(1)
+	}
 	//set the Tip pointer of the current block
 	var tip []byte
 	db,err := bolt.Open(dbFile, 0600, nil)
@@ -75,24 +59,23 @@ func BlockChainWithDb(address string) *Blockchain {
 
 		//check if the blocks bucket already exists
 		if b == nil {
-			//create the genesis block
-			genesis := CreateBlockchain(address)
-			b, err := tx.CreateBucket([]byte(blocksBucket))
+			//create the genesis block from a coinbase transaction
+			coinbaseTx := transactions.NewCoinbaseTX(address, transactions.GenesisCoinbaseData)
+			genesis := NewGenesisBlock(coinbaseTx);
 
+			b, err := tx.CreateBucket([]byte(blocksBucket))
 			if err != nil {
 				log.Panic(err)
 			}
 
 			//set the key as the genesis hash and the value as the serialized block version
 			err = b.Put(genesis.Hash, genesis.Serialze())
-
 			if err != nil {
 				return err
 			}
 
 			//store the pointer hash key for the block
 			err = b.Put([]byte("l"), genesis.Hash)
-
 			if err != nil {
 				return err
 			}
@@ -120,6 +103,48 @@ func BlockChainWithDb(address string) *Blockchain {
 
 	return &bc
 }
+
+//Add a new block to the chain
+func (bc *Blockchain) MineBlock(transactions []*transactions.Transaction){
+	//get the last block added in the chain
+	var lastHash []byte
+	
+	err := bc.Db.View(func(tx *bolt.Tx) error{
+		//fetch the blocks buckte and the last block in the chain
+		b := tx.Bucket([]byte(blocksBucket))
+		lastHash = b.Get([]byte("l"))
+
+		return nil
+	})
+
+	if err != nil {
+		log.Panic(err)
+	}
+
+	//create a new block with the fetched lastHash
+	newBlock := NewBlock(transactions, lastHash)
+
+	err = bc.Db.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(blocksBucket))
+		err := b.Put(newBlock.Hash,newBlock.Serialze())
+		if err != nil {
+			log.Panic(err)
+		}
+
+		err = b.Put([]byte("l"), newBlock.Hash)
+		if err != nil {
+			log.Panic(err)
+		}
+		bc.Tip = newBlock.Hash
+
+		return nil
+	})
+
+	if err != nil {
+		log.Panic(err)
+	}
+}
+
 
 //creates an iterator which can be used to traverse through the blocks in the chain
 func (bc *Blockchain) Iterator() *BlockchainIterator {

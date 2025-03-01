@@ -5,8 +5,8 @@ import (
 	"crypto/sha256"
 	"log"
 	"time"
+	"encoding/gob"
 	"github.com/Chris-Mwiti/build-your-own-x/go-projects/dev-blockchain/transactions"
-	"github.com/boltdb/bolt"
 )
 
 //block -> store valuable information...
@@ -24,13 +24,38 @@ type Tx struct {
 	Data []byte
 }
 
-type Blockchain struct {
-	//holds the current hash of the block in the chain
-	Tip []byte
 
-	//store the Db connection...used to maintain a connection while the program is running
-	Db *bolt.DB
+//serialization of the block into a byte array a format that can be stored
+//in the boltdb
+func (b *Block) Serialze() []byte {
+	//create a new buffer that will store the bytes array
+	var result bytes.Buffer
+
+	//create a new encoder that will encode the data into byte array
+	encoder := gob.NewEncoder(&result)
+
+	err := encoder.Encode(b)
+
+	//check if the transmitted is a nil pointer
+	if err != nil {
+		log.Panic(err)
+	}
+
+	return result.Bytes()
 }
+
+//deserialize func that will revert the byte array into a *Block struct
+//this will be an independent function
+func DeserialzeBlock(d []byte) *Block {
+	var block Block
+
+	//init a new decoder 
+	decoder := gob.NewDecoder(bytes.NewReader(d))
+	decoder.Decode(&block)
+
+	return &block
+}
+
 
 
 //block creation
@@ -52,46 +77,6 @@ func NewBlock(transactions []*transactions.Transaction, prevBlockHash []byte) *B
 	return block
 }
 
-//Add a new block to the chain
-func (bc *Blockchain) AddBlock(data string){
-	//get the last block added in the chain
-	var lastHash []byte
-	
-	err := bc.Db.View(func(tx *bolt.Tx) error{
-		//fetch the blocks buckte and the last block in the chain
-		b := tx.Bucket([]byte(blocksBucket))
-		lastHash = b.Get([]byte("l"))
-
-		return nil
-	})
-
-	if err != nil {
-		log.Panic(err)
-	}
-
-	//create a new block with the fetched lastHash
-	newBlock := NewBlock(data, lastHash)
-
-	err = bc.Db.Update(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte(blocksBucket))
-		err := b.Put(newBlock.Hash,newBlock.Serialze())
-		if err != nil {
-			log.Panic(err)
-		}
-
-		err = b.Put([]byte("l"), newBlock.Hash)
-		if err != nil {
-			log.Panic(err)
-		}
-		bc.Tip = newBlock.Hash
-
-		return nil
-	})
-
-	if err != nil {
-		log.Panic(err)
-	}
-}
 
 func (block *Block) HashTransactions() []byte {
 	var txHashes [][]byte
@@ -115,6 +100,9 @@ func NewGenesisBlock(coinbase *transactions.Transaction) *Block {
 		coinbase,
 	}, []byte{})
 }
+
+
+
 //creates a new blockchain with the actual blockchain
 func NewBlockchain() *Blockchain {
 	return BlockChainWithDb(transactions.GenesisCoinbaseData)

@@ -19,24 +19,15 @@ func (cli *Cli) Run(){
 	cli.validateArgs()
 
 	//blockchain commands
-	addBlockCmd := flag.NewFlagSet("addblock", flag.ExitOnError)
 	printChainCmd := flag.NewFlagSet("printchain", flag.ExitOnError)
 	createChainCmd := flag.NewFlagSet("createchain", flag.ExitOnError)
 
-	//holds the block data for the parsed addBlockCmd argument
-	addBlockData := addBlockCmd.String("data", "", "Block data")
 
 	//used to hold the address of the newly created chain	
 	chainAddress := createChainCmd.String("address", "", "Chain address")
 
 	//loop over the args and check for the commands
 	switch os.Args[1] {
-	case "addblock":
-		err := addBlockCmd.Parse((os.Args[2:]))
-		if err != nil {
-			log.Fatal(err)
-		}
-
 	case "printchain":
 		err := printChainCmd.Parse(os.Args[2:])
 		if err != nil {
@@ -54,23 +45,12 @@ func (cli *Cli) Run(){
 		os.Exit(1)
 	}
 
-	//checks if there's no parsed value..if not provides a description on how to use the command
-	if addBlockCmd.Parsed() {
-		if *addBlockData == ""{
-			addBlockCmd.Usage()
-			os.Exit(1)
-		}
-		//data has been captured store to the chain by dereferencing the parsed argument
-		cli.addBlock(*addBlockData)
-	}
-
 	if createChainCmd.Parsed() {
 		if *chainAddress == ""{
 			createChainCmd.Usage()
 			os.Exit(1)
 		}
-		
-		cli.createChain()
+		cli.createChain(*chainAddress)
 	}
 
 	if printChainCmd.Parsed() {
@@ -78,12 +58,7 @@ func (cli *Cli) Run(){
 	}
 }
 
-//proxy func to blockchain addblock
-func (cli *Cli) addBlock(data string) {
-	cli.Bc.AddBlock(data)
 
-	fmt.Println("Success !")
-}
 
 //proxy func to print chains in the blockchain
 func (cli *Cli) printChain() {
@@ -111,16 +86,17 @@ func (cli *Cli) printChain() {
 }
 
 //creates a new chain
-func (cli *Cli) createChain() *blockchain.Blockchain{
-	chain := blockchain.NewBlockchain()
-	return chain
+func (cli *Cli) createChain(address string){ 
+	chain := blockchain.BlockChainWithDb(address)
+	defer chain.Db.Close()
+	fmt.Println("Completed creating the chain!")
 }
 
 //prints the usage of the commands
 func (cli *Cli) printUsage() {
 	fmt.Println("Usage:")
-	fmt.Println(" addblock -data (BLOCK_DATA) - add a block to the blockchain")
 	fmt.Println(" printchain - print all the blocks of the blockchain")
+	fmt.Println("createchain - creates a chain if none exists")
 }
 
 
