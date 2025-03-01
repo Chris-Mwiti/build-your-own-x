@@ -5,6 +5,7 @@ import (
 	"encoding/gob"
 	"log"
 	"github.com/boltdb/bolt"
+	"github.com/Chris-Mwiti/build-your-own-x/go-projects/dev-blockchain/transactions"
 )
 
 //blockchain iterator type
@@ -49,7 +50,18 @@ func DeserialzeBlock(d []byte) *Block {
 	return &block
 }
 
-func BlockChainWithDb() *Blockchain {
+//this function is used to create the first block in the blockchain
+func CreateBlockchain(address string) *Block {
+	//create a coinbase contex of the genesis block
+	cbtx := transactions.NewCoinbaseTX(address, transactions.GenesisCoinbaseData);
+	
+	//creation of the first genesis block of the chain
+	genesis := NewGenesisBlock(cbtx);
+
+	return genesis
+}
+
+func BlockChainWithDb(address string) *Blockchain {
 	//set the Tip pointer of the current block
 	var tip []byte
 	db,err := bolt.Open(dbFile, 0600, nil)
@@ -64,7 +76,7 @@ func BlockChainWithDb() *Blockchain {
 		//check if the blocks bucket already exists
 		if b == nil {
 			//create the genesis block
-			genesis := NewGenesisBlock()
+			genesis := CreateBlockchain(address)
 			b, err := tx.CreateBucket([]byte(blocksBucket))
 
 			if err != nil {
@@ -74,8 +86,16 @@ func BlockChainWithDb() *Blockchain {
 			//set the key as the genesis hash and the value as the serialized block version
 			err = b.Put(genesis.Hash, genesis.Serialze())
 
+			if err != nil {
+				return err
+			}
+
 			//store the pointer hash key for the block
 			err = b.Put([]byte("l"), genesis.Hash)
+
+			if err != nil {
+				return err
+			}
 
 			//sets the pointer of the current hash block
 			tip = genesis.Hash
@@ -86,6 +106,10 @@ func BlockChainWithDb() *Blockchain {
 
 		return nil
 	})
+
+	if err != nil {
+		log.Panic(err)
+	}
 
 	//create a db connected blockchain with the 
 	//current and latest block hash & ongoing the db connection
@@ -127,6 +151,7 @@ func (i *BlockchainIterator) Next() (*Block, error) {
 
 	//set the iterator current Hash block pointer..
 	//to the prevBlock in the chain
+	//we have done this since the latest block is the one added latest
 	i.currentHash = block.PrevBlockHash
 
 	return block,nil

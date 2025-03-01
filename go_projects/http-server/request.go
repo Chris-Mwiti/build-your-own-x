@@ -117,7 +117,7 @@ func RequestServer(){
 	fmt.Printf("client: status code: %d\n", res.StatusCode)
 
 
-	//read all the response body
+	//read all the response bodyhttps://github.com/gitau-BSC/Project_final.git
 	resBody, err := io.ReadAll(res.Body)
 	if err != nil {
 		fmt.Printf("client: could not read response body: %s\n", err)

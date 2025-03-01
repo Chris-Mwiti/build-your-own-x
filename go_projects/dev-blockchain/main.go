@@ -1,9 +1,8 @@
 package main
 
 import (
-	"github.com/Chris-Mwiti/build-your-own-x/go-projects/dev-blockchain/blockchain"
 	"github.com/Chris-Mwiti/build-your-own-x/go-projects/dev-blockchain/cli"
-
+	"github.com/Chris-Mwiti/build-your-own-x/go-projects/dev-blockchain/blockchain"
 )
 
 

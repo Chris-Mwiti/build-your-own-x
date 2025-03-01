@@ -4,8 +4,9 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"log"
-	"strconv"
 	"time"
+
+	"github.com/Chris-Mwiti/build-your-own-x/go-projects/dev-blockchain/transactions"
 	"github.com/boltdb/bolt"
 )
 
@@ -14,7 +15,7 @@ type Block struct {
 	PrevBlockHash []byte
 	Hash []byte
 	Timestamp int64
-	Data *Tx
+	Transaction []*transactions.Transaction
 	Nounce int
 }
 
@@ -32,26 +33,12 @@ type Blockchain struct {
 	Db *bolt.DB
 }
 
-//creation of hashes of blocks...This is will be used to keep track of blocks
-//and make it difficult to actually add block into the network
-func (b *Block) SetHash(){
-	//creation of a timestamp that will keep track of time a block is created
-	timestamp := []byte(strconv.FormatInt(b.Timestamp, 10))
-	//combination of the prevBlockHash,data and timestamp into one byte slice
-	headers := bytes.Join([][]byte{b.PrevBlockHash, b.Data.Data, timestamp}, []byte{})
-	//creation of a hash from the headers
-	hash := sha256.Sum256(headers)
-	b.Hash = hash[:]
-
-}
 
 //block creation
-func NewBlock(data string, prevBlockHash []byte) *Block {
+func NewBlock(transactions []*transactions.Transaction, prevBlockHash []byte) *Block {
 	block := &Block{
 		Timestamp: time.Now().Unix(),
-		Data: &Tx{
-			Data: []byte(data),
-		},
+		Transaction: transactions,
 		PrevBlockHash: prevBlockHash,
 		Hash: []byte{},
 		Nounce:0,
@@ -101,15 +88,36 @@ func (bc *Blockchain) AddBlock(data string){
 
 		return nil
 	})
+
+	if err != nil {
+		log.Panic(err)
+	}
+}
+
+func (block *Block) HashTransactions() []byte {
+	var txHashes [][]byte
+	var txHash  [32]byte
+
+	//store each id in the transaction in to one hash
+	for _, tx := range block.Transaction {
+		txHashes = append(txHashes, tx.ID)
+	}
+
+	txHash = sha256.Sum256(bytes.Join(txHashes, []byte{}))
+
+	return txHash[:]
+	
 }
 
 
 //func that actually creates the genesis block
-func NewGenesisBlock() *Block {
-	return NewBlock("The genesis block", []byte{})
+func NewGenesisBlock(coinbase *transactions.Transaction) *Block {
+	return NewBlock([]*transactions.Transaction{
+		coinbase,
+	}, []byte{})
 }
 //creates a new blockchain with the actual blockchain
 func NewBlockchain() *Blockchain {
-	return BlockChainWithDb()
+	return BlockChainWithDb("Media blockchain")
 }
 
