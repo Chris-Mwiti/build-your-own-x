@@ -90,3 +90,17 @@ func NewCoinbaseTX(to, data string) *Transaction {
     return &tx
 }
 
+
+//unspent transactions section
+//unspent transactions means that these outputs weren't referenced in any inputs
+//we can only unlock those that can be unlocked by the key we own
+
+//@todo: to be defined in the near future
+func (in *TxInput) CanUnlockOutputWith(unlockingData string) bool {
+    return in.ScriptSig == unlockingData;
+}
+
+func (out *TxOutput) CanBeUnlockedWith(unlockingData string) bool {
+    return out.ScriptPubKey == unlockingData
+}
+

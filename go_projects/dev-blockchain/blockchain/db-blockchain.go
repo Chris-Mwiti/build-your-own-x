@@ -1,9 +1,11 @@
 package blockchain
 
 import (
+	"encoding/hex"
 	"fmt"
 	"log"
 	"os"
+
 	"github.com/Chris-Mwiti/build-your-own-x/go-projects/dev-blockchain/transactions"
 	"github.com/boltdb/bolt"
 )
@@ -142,6 +144,37 @@ func (bc *Blockchain) MineBlock(transactions []*transactions.Transaction){
 
 	if err != nil {
 		log.Panic(err)
+	}
+}
+
+func (bc *Blockchain) FindUnspentTransactions(address string) []transactions.Transaction {
+	var unspent []transactions.Transaction
+
+	//research more on this how does it store data
+	spentTXOs := make(map[string][]int)
+	bci := bc.Iterator();
+
+	for {
+		block, err := bci.Next()
+
+		if err != nil {
+			log.Panic(err)
+			break
+		}
+
+
+		//loop through the transaction in each block
+		for _, tx := range block.Transaction {
+			txID := hex.EncodeToString(tx.ID)
+
+			Outputs:
+				for outIdx, out := range tx.Vout {
+					//was the output spent?
+					if spentTXOs[txID] != nil {
+
+					}
+				}
+		}
 	}
 }
 
