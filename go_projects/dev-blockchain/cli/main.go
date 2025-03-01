@@ -18,12 +18,16 @@ func (cli *Cli) Run(){
 	//validate the cli arguments
 	cli.validateArgs()
 
-	//add block command
+	//blockchain commands
 	addBlockCmd := flag.NewFlagSet("addblock", flag.ExitOnError)
 	printChainCmd := flag.NewFlagSet("printchain", flag.ExitOnError)
+	createChainCmd := flag.NewFlagSet("createchain", flag.ExitOnError)
 
 	//holds the block data for the parsed addBlockCmd argument
 	addBlockData := addBlockCmd.String("data", "", "Block data")
+
+	//used to hold the address of the newly created chain	
+	chainAddress := createChainCmd.String("address", "", "Chain address")
 
 	//loop over the args and check for the commands
 	switch os.Args[1] {
@@ -38,6 +42,13 @@ func (cli *Cli) Run(){
 		if err != nil {
 			log.Fatal(err)
 		}
+
+	case "createchain":
+		err := createChainCmd.Parse((os.Args[2:]))
+		if err != nil {
+			log.Fatal(err)
+		}
+	
 	default:
 		cli.printUsage()
 		os.Exit(1)
@@ -53,18 +64,28 @@ func (cli *Cli) Run(){
 		cli.addBlock(*addBlockData)
 	}
 
+	if createChainCmd.Parsed() {
+		if *chainAddress == ""{
+			createChainCmd.Usage()
+			os.Exit(1)
+		}
+		
+		cli.createChain()
+	}
+
 	if printChainCmd.Parsed() {
 		cli.printChain()
 	}
 }
 
-
+//proxy func to blockchain addblock
 func (cli *Cli) addBlock(data string) {
 	cli.Bc.AddBlock(data)
 
 	fmt.Println("Success !")
 }
 
+//proxy func to print chains in the blockchain
 func (cli *Cli) printChain() {
 	bci := cli.Bc.Iterator()
 
@@ -87,6 +108,12 @@ func (cli *Cli) printChain() {
 			break
 		}
 	}
+}
+
+//creates a new chain
+func (cli *Cli) createChain() *blockchain.Blockchain{
+	chain := blockchain.NewBlockchain()
+	return chain
 }
 
 //prints the usage of the commands

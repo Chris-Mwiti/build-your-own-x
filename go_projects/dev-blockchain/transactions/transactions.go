@@ -36,7 +36,6 @@ const GenesisCoinbaseData = "This is the first block created in the blockchain"
 
 //coinbase transaction
 //special type of transaction which doesn't require previously existing outputs
-
 func NewCoinbaseTX(to, data string) *Transaction {
     if data == ""{
         data = fmt.Sprintf("Reward to %s", to)

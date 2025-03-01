@@ -121,6 +121,7 @@ func BlockChainWithDb(address string) *Blockchain {
 	return &bc
 }
 
+//creates an iterator which can be used to traverse through the blocks in the chain
 func (bc *Blockchain) Iterator() *BlockchainIterator {
 	//the Tip of a blockchain...from the top to the bottom...newest to the oldest
 	bci := &BlockchainIterator{
@@ -153,7 +154,5 @@ func (i *BlockchainIterator) Next() (*Block, error) {
 	//to the prevBlock in the chain
 	//we have done this since the latest block is the one added latest
 	i.currentHash = block.PrevBlockHash
-
 	return block,nil
-
 }
