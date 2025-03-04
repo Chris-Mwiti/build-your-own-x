@@ -2,6 +2,8 @@ import os
 from fastapi import APIRouter, FastAPI, WebSocket, Request, HTTPException, WebSocketDisconnect,Depends
 from ..sockets.connection import ConnectionManager
 from ..utils.utils import get_token
+from ..redis.producer import Producer
+from ..redis.config import Redis
 import uuid
 
 # initialize a new manager to manage the connections
@@ -9,6 +11,9 @@ manager = ConnectionManager()
 
 # Initialize a new chat route factory that will contain it specific routes and handlers
 chat = APIRouter();
+
+#creation of a new redis connection instance
+redis = Redis()
 
 # used to create tokens that will be used to actually authorize requests to the chat route
 @chat.post("/token")
@@ -37,6 +42,11 @@ async def refresh_generator(request:Request):
 async def websocket_endpoint(websocket: WebSocket = WebSocket, token: str = Depends(get_token)):
     await manager.connect(websocket=websocket)
 
+    # creation of a new redis client instance
+    redis_client = await redis.create_connection()
+
+    #we create a new producer that will create messages that will be queued before entering the consumer
+    producer = Producer(redis_client=redis_client) 
     try:
         while True:
             data = await websocket.receive_text()
