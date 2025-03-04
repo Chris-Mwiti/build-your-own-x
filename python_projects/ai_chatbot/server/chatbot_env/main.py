@@ -24,6 +24,6 @@ async def root():
 #initialize and execute the server
 if __name__ == "__main__":
     if os.environ.get("API_ENV") == "development":
-       uvicorn.run("main:api", host="127.0.0.1", port=3500,workers=4,reload=True) 
+       uvicorn.run("main:api", host="0.0.0.0", port=3500,workers=4,reload=True) 
     else:
         raise Exception("running on a non-development server")

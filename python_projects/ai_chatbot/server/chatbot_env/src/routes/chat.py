@@ -1,6 +1,11 @@
 import os
-from fastapi import APIRouter, FastAPI, WebSocket, Request, HTTPException
+from fastapi import APIRouter, FastAPI, WebSocket, Request, HTTPException, WebSocketDisconnect,Depends
+from ..sockets.connection import ConnectionManager
+from ..utils.utils import get_token
 import uuid
+
+# initialize a new manager to manage the connections
+manager = ConnectionManager()
 
 # Initialize a new chat route factory that will contain it specific routes and handlers
 chat = APIRouter();
@@ -29,5 +34,13 @@ async def refresh_generator(request:Request):
 
 # a chat web socket initialiization
 @chat.websocket("/chat")
-async def websocket_endpoint(websocket: WebSocket = WebSocket):
-    return None
+async def websocket_endpoint(websocket: WebSocket = WebSocket, token: str = Depends(get_token)):
+    await manager.connect(websocket=websocket)
+
+    try:
+        while True:
+            data = await websocket.receive_text()
+            print(data)
+            await manager.send_personal_message(f"Response: Simulating response from the GPT service", websocket=websocket)
+    except WebSocketDisconnect:
+        manager.disconnect(websocket=websocket)
