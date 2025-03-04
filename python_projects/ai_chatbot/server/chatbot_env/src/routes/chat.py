@@ -40,9 +40,12 @@ async def refresh_generator(request:Request):
 # a chat web socket initialiization
 @chat.websocket("/chat")
 async def websocket_endpoint(websocket: WebSocket = WebSocket, token: str = Depends(get_token)):
+
+    #basically this func is used to append all conn instances to a list of conns
     await manager.connect(websocket=websocket)
 
     # creation of a new redis client instance
+    # so for each instance connection redis connection is established
     redis_client = await redis.create_connection()
 
     #we create a new producer that will create messages that will be queued before entering the consumer
@@ -51,6 +54,10 @@ async def websocket_endpoint(websocket: WebSocket = WebSocket, token: str = Depe
         while True:
             data = await websocket.receive_text()
             print(data)
+            stream_data = {}
+            stream_data[token] = data
+
+            await producer.add_to_stream(stream_data=stream_data, stream_channel="producer channel")
             await manager.send_personal_message(f"Response: Simulating response from the GPT service", websocket=websocket)
     except WebSocketDisconnect:
         manager.disconnect(websocket=websocket)
