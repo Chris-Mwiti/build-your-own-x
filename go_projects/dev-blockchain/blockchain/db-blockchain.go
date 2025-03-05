@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-
 	"github.com/Chris-Mwiti/build-your-own-x/go-projects/dev-blockchain/transactions"
 	"github.com/boltdb/bolt"
 )
@@ -161,8 +160,6 @@ func (bc *Blockchain) FindUnspentTransactions(address string) []transactions.Tra
 			log.Panic(err)
 			break
 		}
-
-
 		//loop through the transaction in each block
 		for _, tx := range block.Transaction {
 			txID := hex.EncodeToString(tx.ID)
