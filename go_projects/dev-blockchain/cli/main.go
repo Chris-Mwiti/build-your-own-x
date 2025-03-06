@@ -92,6 +92,20 @@ func (cli *Cli) createChain(address string){
 	fmt.Println("Completed creating the chain!")
 }
 
+func (cli *Cli) getBalance(address string){
+	bc := blockchain.BlockChainWithDb(address);
+	defer bc.Db.Close()
+
+	balance := 0
+	UTXOs := bc.FindUnspentTxo(address)
+
+	for _, out := range UTXOs {
+		balance += out.Value
+	}
+
+	fmt.Printf("Balance of %s : %d\n", address, balance)
+}
+
 //prints the usage of the commands
 func (cli *Cli) printUsage() {
 	fmt.Println("Usage:")

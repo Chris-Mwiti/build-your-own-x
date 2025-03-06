@@ -164,15 +164,52 @@ func (bc *Blockchain) FindUnspentTransactions(address string) []transactions.Tra
 		for _, tx := range block.Transaction {
 			txID := hex.EncodeToString(tx.ID)
 
+			
 			Outputs:
 				for outIdx, out := range tx.Vout {
 					//was the output spent?
 					if spentTXOs[txID] != nil {
+						for _, spentOut := range spentTXOs[txID] {
+							if spentOut == outIdx {
+								continue Outputs
+							}
+						}
+					}
+
+					if out.CanBeUnlockedWith(address) {
+						unspent = append(unspent, *tx)
+					}
+
+					if tx.IsCoinbase() == false {
+						for _, in := range tx.Vin {
+							if in.CanUnlockOutputWith(address) {
+								inTxId := hex.EncodeToString(tx.ID)
+								spentTXOs[inTxId] = append(spentTXOs[inTxId], in.Vout)
+							}
+						}
 
 					}
 				}
 		}
 	}
+
+	return unspent
+}
+
+func ( bc *Blockchain) FindUnspentTxo(address string) []transactions.TxOutput{
+	var UTXOS []transactions.TxOutput
+
+	unspentTransactions := bc.FindUnspentTransactions(address)
+
+	for _, tx := range unspentTransactions {
+		for _, out := range tx.Vout {
+			if out.CanBeUnlockedWith(address){
+				UTXOS = append(UTXOS, out)
+			}
+		}
+	}
+
+	return UTXOS
 }
 
 

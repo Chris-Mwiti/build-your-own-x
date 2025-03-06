@@ -18,8 +18,8 @@ import (
 //example of a bitcoin structure type
 type Transaction struct {
     ID []byte
-    Vin []TxInput
-    Vout []TxOutput
+    Vin []TxInput //references of transactions that are inputs to this transactions
+    Vout []TxOutput //stamps the value 
 }
 
 //input of a new trasaction reference the outputs of a previous transaction
