@@ -104,3 +104,11 @@ func (out *TxOutput) CanBeUnlockedWith(unlockingData string) bool {
     return out.ScriptPubKey == unlockingData
 }
 
+
+//checks if a transaction is a coinbase
+func (tx *Transaction) IsCoinbase() bool {
+    if len(tx.Vin) != 1 {
+        return false
+    }
+    return tx.Vin[0].Vout == -1
+}

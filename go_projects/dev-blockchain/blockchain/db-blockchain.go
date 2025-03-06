@@ -149,7 +149,7 @@ func (bc *Blockchain) MineBlock(transactions []*transactions.Transaction){
 func (bc *Blockchain) FindUnspentTransactions(address string) []transactions.Transaction {
 	var unspent []transactions.Transaction
 
-	//research more on this how does it store data
+	//stores the spent transactions within a transaction 	
 	spentTXOs := make(map[string][]int)
 	bci := bc.Iterator();
 
@@ -164,10 +164,11 @@ func (bc *Blockchain) FindUnspentTransactions(address string) []transactions.Tra
 		for _, tx := range block.Transaction {
 			txID := hex.EncodeToString(tx.ID)
 
-			
 			Outputs:
 				for outIdx, out := range tx.Vout {
-					//was the output spent?
+					//we check whether our local dict of spent transactions contain the transaction
+					//if not then we loop over the spent transactions outputs indexex and compare if it matches with out current output index we are
+					//if its true we continue to the next transaction index since our focus is finding the unspent transactions  
 					if spentTXOs[txID] != nil {
 						for _, spentOut := range spentTXOs[txID] {
 							if spentOut == outIdx {
@@ -180,6 +181,10 @@ func (bc *Blockchain) FindUnspentTransactions(address string) []transactions.Tra
 						unspent = append(unspent, *tx)
 					}
 
+					//checks whether the transaction is a coinbase(initial) transaction
+					//if not the transaction must have inputs..so we loop over the input
+					//and check whether we can unlock the input with the address(but eventually will change)
+					//if we unlock we append to the spent transactions slice of that transaction the index of the output being referenced
 					if tx.IsCoinbase() == false {
 						for _, in := range tx.Vin {
 							if in.CanUnlockOutputWith(address) {
@@ -196,7 +201,7 @@ func (bc *Blockchain) FindUnspentTransactions(address string) []transactions.Tra
 	return unspent
 }
 
-func ( bc *Blockchain) FindUnspentTxo(address string) []transactions.TxOutput{
+func (bc *Blockchain) FindUnspentTxo(address string) []transactions.TxOutput{
 	var UTXOS []transactions.TxOutput
 
 	unspentTransactions := bc.FindUnspentTransactions(address)
@@ -228,7 +233,7 @@ func (bc *Blockchain) Iterator() *BlockchainIterator {
 func (i *BlockchainIterator) Next() (*Block, error) {
 	var block *Block
 	
-	err := i.db.View(func (tx *bolt.Tx) error {
+	err := i.db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(blocksBucket))
 		//perfoms a get operation for the current block in the chain
 		//deserialize the block from the bytes array to block struct
