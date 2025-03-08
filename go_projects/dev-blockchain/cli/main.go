@@ -21,10 +21,14 @@ func (cli *Cli) Run(){
 	//blockchain commands
 	printChainCmd := flag.NewFlagSet("printchain", flag.ExitOnError)
 	createChainCmd := flag.NewFlagSet("createchain", flag.ExitOnError)
+	getBalanceCmd := flag.NewFlagSet("getbalance", flag.ExitOnError)
 
 
 	//used to hold the address of the newly created chain	
 	chainAddress := createChainCmd.String("address", "", "Chain address")
+
+	//stores the get balance address
+	balanceAddress := getBalanceCmd.String("address", "", "wallet address")
 
 	//loop over the args and check for the commands
 	switch os.Args[1] {
@@ -40,6 +44,11 @@ func (cli *Cli) Run(){
 			log.Fatal(err)
 		}
 	
+	case "getbalance":
+		err := getBalanceCmd.Parse(os.Args[2:])
+		if err != nil {
+			log.Fatal(err)
+		}
 	default:
 		cli.printUsage()
 		os.Exit(1)
@@ -55,6 +64,14 @@ func (cli *Cli) Run(){
 
 	if printChainCmd.Parsed() {
 		cli.printChain()
+	}
+
+	if getBalanceCmd.Parsed() {
+		if *balanceAddress == ""{
+			getBalanceCmd.Usage()
+			os.Exit(1)
+		}
+		cli.getBalance(*balanceAddress)
 	}
 }
 
@@ -111,6 +128,7 @@ func (cli *Cli) printUsage() {
 	fmt.Println("Usage:")
 	fmt.Println(" printchain - print all the blocks of the blockchain")
 	fmt.Println("createchain - creates a chain if none exists")
+	fmt.Println("getbalance -address fetches the coins balance for a specific address")
 }
 
 
@@ -121,3 +139,9 @@ func (cli *Cli) validateArgs() {
 		os.Exit(1)
 	}
 }
+
+
+
+
+
+

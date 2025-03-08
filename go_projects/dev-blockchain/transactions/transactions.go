@@ -71,7 +71,7 @@ func NewCoinbaseTX(to, data string) *Transaction {
     }
 
     //@todo: implement a proper subsidy strategy
-    subsidy := 0;
+    subsidy := 20;
     txout := TxOutput{
         Value: subsidy,
         ScriptPubKey: to,

@@ -43,7 +43,7 @@ func dbExists() bool {
 //creation of a blockchain with db
 func BlockChainWithDb(address string) *Blockchain {
 
-	if dbExists() == false {
+	if !dbExists() {
 		fmt.Println("No existing blockchain found. Create one first.")
 		os.Exit(1)
 	}
@@ -185,7 +185,7 @@ func (bc *Blockchain) FindUnspentTransactions(address string) []transactions.Tra
 					//if not the transaction must have inputs..so we loop over the input
 					//and check whether we can unlock the input with the address(but eventually will change)
 					//if we unlock we append to the spent transactions slice of that transaction the index of the output being referenced
-					if tx.IsCoinbase() == false {
+					if !tx.IsCoinbase() {
 						for _, in := range tx.Vin {
 							if in.CanUnlockOutputWith(address) {
 								inTxId := hex.EncodeToString(tx.ID)
@@ -249,7 +249,7 @@ func (i *BlockchainIterator) Next() (*Block, error) {
 
 	//set the iterator current Hash block pointer..
 	//to the prevBlock in the chain
-	//we have done this since the latest block is the one added latest
+	//we have done this since the latest block is the one added first
 	i.currentHash = block.PrevBlockHash
 	return block,nil
 }
