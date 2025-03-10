@@ -160,6 +160,10 @@ func (bc *Blockchain) FindUnspentTransactions(address string) []transactions.Tra
 			log.Panic(err)
 			break
 		}
+
+		if len(block.PrevBlockHash) == 0 {
+			break
+		}
 		//loop through the transaction in each block
 		for _, tx := range block.Transaction {
 			txID := hex.EncodeToString(tx.ID)
@@ -203,7 +207,7 @@ func (bc *Blockchain) FindUnspentTransactions(address string) []transactions.Tra
 					if !tx.IsCoinbase() {
 						for _, in := range tx.Vin {
 							if in.CanUnlockOutputWith(address) {
-								inTxId := hex.EncodeToString(tx.ID)
+								inTxId := hex.EncodeToString(in.Txid)
 								spentTXOs[inTxId] = append(spentTXOs[inTxId], in.Vout)
 							}
 						}
