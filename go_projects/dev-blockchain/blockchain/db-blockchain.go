@@ -181,6 +181,21 @@ func (bc *Blockchain) FindUnspentTransactions(address string) []transactions.Tra
 						unspent = append(unspent, *tx)
 					}
 
+					/**
+						{
+							Vin: []{
+								Id: => the id of the transction being referenced,
+								Vout => index of the output of the transaction being referenced
+								ScriptSig => address used to unlock the input	
+							},
+							Vout: []{
+								Value
+								Addresses	
+								ScriptPubKey
+							}	
+						}	
+					**/	
+
 					//checks whether the transaction is a coinbase(initial) transaction
 					//if not the transaction must have inputs..so we loop over the input
 					//and check whether we can unlock the input with the address(but eventually will change)
@@ -242,6 +257,8 @@ func (i *BlockchainIterator) Next() (*Block, error) {
 
 		return nil
 	})
+
+	log.Printf("Block %#v", block)
 
 	if err != nil {
 		return nil,err
