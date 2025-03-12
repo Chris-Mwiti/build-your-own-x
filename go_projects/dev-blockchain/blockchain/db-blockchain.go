@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"github.com/Chris-Mwiti/build-your-own-x/go-projects/dev-blockchain/transactions"
 	"github.com/boltdb/bolt"
+	"github.com/Chris-Mwiti/build-your-own-x/go-projects/dev-blockchain/transactions"
 )
 
 type Blockchain struct {
@@ -234,6 +234,83 @@ func (bc *Blockchain) FindUnspentTxo(address string) []transactions.TxOutput{
 	}
 
 	return UTXOS
+}
+
+func (bc *Blockchain) FindSpendableOutputs(address string, amount int)(int, map[string][]int){
+	unspentOutputs := make(map[string][]int)
+	unspentTxs := bc.FindUnspentTransactions(address)
+	accumulated := 0
+
+	//here we loop over all collected unspent transactions
+	//and check whether their outputs can be unlocked with current address
+	//and the accumulated value is less than the amount checked against
+	Work:
+		for _, tx := range unspentTxs {
+			txID := hex.EncodeToString(tx.ID)
+
+			for outIdx, out := range tx.Vout {
+				if out.CanBeUnlockedWith(address) && accumulated < amount {
+					accumulated += out.Value
+					unspentOutputs[txID] = append(unspentOutputs[txID], outIdx)
+				}			
+
+				if accumulated >= amount {
+					break Work
+				}
+			}
+		}
+	
+	return accumulated, unspentOutputs
+}
+
+
+//sending coins...here we create a new transaction, put it in a block
+//mine the block
+func (bc *Blockchain) NewUTXOTransaction(from,to string, amount int) *transactions.Transaction {
+    //stores the inputs of the transaction from
+    var inputs []transactions.TxInput
+    //stores the outputs after a transaction is made
+    var outputs []transactions.TxOutput
+
+    //checks and extracts the spendable outputs in a transaction
+    acc, validOutputs := bc.FindSpendableOutputs(from, amount)
+
+    if acc < amount {
+        log.Panic("ERROR: Not enough funds")
+    }
+
+
+    for txid, outs := range validOutputs {
+        txId, err := hex.DecodeString(txid)
+
+        if err != nil {
+            log.Panicf("Error:%v", err)
+        }
+        for _, out := range outs {
+            //creates an input from the outputs from the sender
+            input := transactions.TxInput{
+                Txid: txId,
+                Vout: out,
+                ScriptSig: from,
+            }
+            inputs = append(inputs, input)
+        }
+    }
+
+    //Build a list of outputs
+    outputs = append(outputs, transactions.TxOutput{amount, to})
+
+    if acc > amount {
+        outputs = append(outputs, transactions.TxOutput{acc - amount, from})
+    }
+
+    //create a new transaction based on the generated outputs and inputs
+    tx := transactions.Transaction{nil, inputs, outputs}
+
+    //create the ID of the transaction
+    tx.SetID()
+
+    return &tx
 }
 
 

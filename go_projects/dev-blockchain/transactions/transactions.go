@@ -112,3 +112,5 @@ func (tx *Transaction) IsCoinbase() bool {
     }
     return tx.Vin[0].Vout == -1
 }
+
+
