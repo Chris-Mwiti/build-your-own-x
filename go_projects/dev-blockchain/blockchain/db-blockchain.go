@@ -237,6 +237,7 @@ func (bc *Blockchain) FindUnspentTxo(address string) []transactions.TxOutput{
 }
 
 func (bc *Blockchain) FindSpendableOutputs(address string, amount int)(int, map[string][]int){
+	//stores the unspent outputs
 	unspentOutputs := make(map[string][]int)
 	unspentTxs := bc.FindUnspentTransactions(address)
 	accumulated := 0
