@@ -6,7 +6,9 @@ import (
 	"log"
 	"os"
 	"strconv"
+
 	"github.com/Chris-Mwiti/build-your-own-x/go-projects/dev-blockchain/blockchain"
+	"github.com/Chris-Mwiti/build-your-own-x/go-projects/dev-blockchain/transactions"
 )
 
 
@@ -22,6 +24,7 @@ func (cli *Cli) Run(){
 	printChainCmd := flag.NewFlagSet("printchain", flag.ExitOnError)
 	createChainCmd := flag.NewFlagSet("createchain", flag.ExitOnError)
 	getBalanceCmd := flag.NewFlagSet("getbalance", flag.ExitOnError)
+	sendBalanceCmd := flag.NewFlagSet("send", flag.ExitOnError)
 
 
 	//used to hold the address of the newly created chain	
@@ -30,7 +33,12 @@ func (cli *Cli) Run(){
 	//stores the get balance address
 	balanceAddress := getBalanceCmd.String("address", "", "wallet address")
 
-	//loop over the args and check for the commands
+	//stores the from, to and amount to be sent over the network
+	senderAddress := sendBalanceCmd.String("from", "", " sender wallet address")
+	receiverAddress := sendBalanceCmd.String("to", "", " receiver wallet address")
+	amountToSend := sendBalanceCmd.Int("amount", 0, "amount to be sent")
+
+	//loop over the args and check for the commands and their subsets are already parsed
 	switch os.Args[1] {
 	case "printchain":
 		err := printChainCmd.Parse(os.Args[2:])
@@ -49,6 +57,13 @@ func (cli *Cli) Run(){
 		if err != nil {
 			log.Fatal(err)
 		}
+
+	case "send":
+		err := sendBalanceCmd.Parse(os.Args[2:])
+		if err != nil {
+			log.Fatal(err)
+		}		
+
 	default:
 		cli.printUsage()
 		os.Exit(1)
@@ -72,6 +87,15 @@ func (cli *Cli) Run(){
 			os.Exit(1)
 		}
 		cli.getBalance(*balanceAddress)
+	}
+
+	if sendBalanceCmd.Parsed() {
+		if *senderAddress == "" || *receiverAddress == "" || *amountToSend <= 0 {
+			sendBalanceCmd.Usage()
+			os.Exit(1)
+		}
+
+		cli.send(*senderAddress, *receiverAddress, *amountToSend)
 	}
 }
 
@@ -121,6 +145,21 @@ func (cli *Cli) getBalance(address string){
 	}
 
 	fmt.Printf("Balance of %s : %d\n", address, balance)
+}
+
+func (cli *Cli) send(from, to string, amount int){
+	//initialize the blockchain
+	bc := blockchain.BlockChainWithDb(from)
+
+	defer bc.Db.Close()
+
+	//create a new transaction
+	tx := bc.NewUTXOTransaction(from, to, amount) 
+
+	bc.MineBlock([]*transactions.Transaction{tx})
+
+	fmt.Println("Success !")
+
 }
 
 //prints the usage of the commands
