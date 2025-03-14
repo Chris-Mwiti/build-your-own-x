@@ -39,12 +39,40 @@ func dbExists() bool {
 	return true
 }
 
-
-//creation of a blockchain with db
-func BlockChainWithDb(address string) *Blockchain {
-
+func NewBlockChain(address string) *Blockchain {
 	if !dbExists() {
 		fmt.Println("No existing blockchain found. Create one first.")
+		os.Exit(1)
+	}
+
+	var tip []byte
+	db,err := bolt.Open(dbFile, 0600, nil)
+
+	if err != nil {
+		log.Panic(err)
+	}
+
+	err = db.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(blocksBucket))
+		tip = b.Get([]byte("l"))
+		return nil
+	})
+
+	if err != nil {
+		log.Panic(err)
+	}
+
+	bc := Blockchain{Tip: tip, Db: db}
+
+	return &bc
+}
+
+
+//creation of a blockchain with db
+func CreateBlockchain(address string) *Blockchain {
+
+	if dbExists() {
+		fmt.Println("Blockchain already exists")
 		os.Exit(1)
 	}
 	//set the Tip pointer of the current block
@@ -56,37 +84,29 @@ func BlockChainWithDb(address string) *Blockchain {
 	}
 
 	err = db.Update(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte(blocksBucket))
+		//create the genesis block from a coinbase transaction
+		coinbaseTx := transactions.NewCoinbaseTX(address, transactions.GenesisCoinbaseData)
+		genesis := NewGenesisBlock(coinbaseTx);
 
-		//check if the blocks bucket already exists
-		if b == nil {
-			//create the genesis block from a coinbase transaction
-			coinbaseTx := transactions.NewCoinbaseTX(address, transactions.GenesisCoinbaseData)
-			genesis := NewGenesisBlock(coinbaseTx);
-
-			b, err := tx.CreateBucket([]byte(blocksBucket))
-			if err != nil {
-				log.Panic(err)
-			}
-
-			//set the key as the genesis hash and the value as the serialized block version
-			err = b.Put(genesis.Hash, genesis.Serialze())
-			if err != nil {
-				return err
-			}
-
-			//store the pointer hash key for the block
-			err = b.Put([]byte("l"), genesis.Hash)
-			if err != nil {
-				return err
-			}
-
-			//sets the pointer of the current hash block
-			tip = genesis.Hash
-		} else {
-			//fetch the last hash block instance in the chain
-			tip = b.Get([]byte("l"))
+		b, err := tx.CreateBucket([]byte(blocksBucket))
+		if err != nil {
+			log.Panic(err)
 		}
+
+		//set the key as the genesis hash and the value as the serialized block version
+		err = b.Put(genesis.Hash, genesis.Serialze())
+		if err != nil {
+			return err
+		}
+
+		//store the pointer hash key for the block
+		err = b.Put([]byte("l"), genesis.Hash)
+		if err != nil {
+			return err
+		}
+
+		//sets the pointer of the current hash block
+		tip = genesis.Hash
 
 		return nil
 	})

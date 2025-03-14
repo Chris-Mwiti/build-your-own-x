@@ -6,7 +6,6 @@ import (
 	"log"
 	"os"
 	"strconv"
-
 	"github.com/Chris-Mwiti/build-your-own-x/go-projects/dev-blockchain/blockchain"
 	"github.com/Chris-Mwiti/build-your-own-x/go-projects/dev-blockchain/transactions"
 )
@@ -128,13 +127,13 @@ func (cli *Cli) printChain() {
 
 //creates a new chain
 func (cli *Cli) createChain(address string){ 
-	chain := blockchain.BlockChainWithDb(address)
+	chain := blockchain.CreateBlockchain(address)
 	defer chain.Db.Close()
 	fmt.Println("Completed creating the chain!")
 }
 
 func (cli *Cli) getBalance(address string){
-	bc := blockchain.BlockChainWithDb(address);
+	bc := blockchain.NewBlockChain(address);
 	defer bc.Db.Close()
 
 	balance := 0
@@ -149,7 +148,7 @@ func (cli *Cli) getBalance(address string){
 
 func (cli *Cli) send(from, to string, amount int){
 	//initialize the blockchain
-	bc := blockchain.BlockChainWithDb(from)
+	bc := blockchain.NewBlockChain(from)
 
 	defer bc.Db.Close()
 
