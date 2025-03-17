@@ -24,7 +24,7 @@ type BlockchainIterator struct {
 }
 
 
-const dbFile = "databases/blocks.db"
+const dbFile = "databases/blockchain.db"
 
 //holds the key value pairs of the blocks
 const blocksBucket = "blocksBucket"
@@ -39,6 +39,7 @@ func dbExists() bool {
 	return true
 }
 
+//generally the func gives you back the tip of the blockchain
 func NewBlockChain(address string) *Blockchain {
 	if !dbExists() {
 		fmt.Println("No existing blockchain found. Create one first.")

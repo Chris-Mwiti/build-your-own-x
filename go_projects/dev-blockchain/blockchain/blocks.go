@@ -101,8 +101,3 @@ func NewGenesisBlock(coinbase *transactions.Transaction) *Block {
 	}, []byte{})
 }
 
-//creates a new blockchain with the actual blockchain
-func NewBlockchain() *Blockchain {
-	return BlockChainWithDb(transactions.GenesisCoinbaseData)
-}
-

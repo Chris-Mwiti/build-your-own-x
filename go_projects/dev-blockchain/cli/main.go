@@ -6,6 +6,8 @@ import (
 	"log"
 	"os"
 	"strconv"
+
+
 	"github.com/Chris-Mwiti/build-your-own-x/go-projects/dev-blockchain/blockchain"
 	"github.com/Chris-Mwiti/build-your-own-x/go-projects/dev-blockchain/transactions"
 )
@@ -36,7 +38,6 @@ func (cli *Cli) Run(){
 	senderAddress := sendBalanceCmd.String("from", "", " sender wallet address")
 	receiverAddress := sendBalanceCmd.String("to", "", " receiver wallet address")
 	amountToSend := sendBalanceCmd.Int("amount", 0, "amount to be sent")
-
 	//loop over the args and check for the commands and their subsets are already parsed
 	switch os.Args[1] {
 	case "printchain":
@@ -86,16 +87,17 @@ func (cli *Cli) Run(){
 			os.Exit(1)
 		}
 		cli.getBalance(*balanceAddress)
-	}
-
+	}	
 	if sendBalanceCmd.Parsed() {
 		if *senderAddress == "" || *receiverAddress == "" || *amountToSend <= 0 {
 			sendBalanceCmd.Usage()
 			os.Exit(1)
+	
 		}
-
 		cli.send(*senderAddress, *receiverAddress, *amountToSend)
 	}
+
+
 }
 
 
