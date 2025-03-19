@@ -11,7 +11,12 @@ async def main():
     print(redis)
 
     #set the key values pairs of the redis instance
-    await redis.set("key", "valueii")
+    isSet = redis.set("key", "value")
+
+    if isSet == False:
+        raise Exception("Unable to set value")
+
+
 
 
 if __name__ == "__main__":
