@@ -53,7 +53,7 @@ func NewBlockChain(address string) *Blockchain {
 		log.Panic(err)
 	}
 
-	err = db.Update(func(tx *bolt.Tx) error {
+	err = db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(blocksBucket))
 		tip = b.Get([]byte("l"))
 		return nil
@@ -306,14 +306,25 @@ func (bc *Blockchain) NewUTXOTransaction(from,to string, amount int) *transactio
     }
 
     //Build a list of outputs
-    outputs = append(outputs, transactions.TxOutput{amount, to})
+    outputs = append(outputs, transactions.TxOutput{
+		Value: amount,
+		ScriptPubKey: to,
+	})
 
     if acc > amount {
-        outputs = append(outputs, transactions.TxOutput{acc - amount, from})
+		//we create a change incase the amount exceeds the cumulated amount
+        outputs = append(outputs, transactions.TxOutput{
+			Value: acc - amount,
+			ScriptPubKey: from,
+		})
     }
 
     //create a new transaction based on the generated outputs and inputs
-    tx := transactions.Transaction{nil, inputs, outputs}
+    tx := transactions.Transaction{
+		ID: nil,
+		Vin: inputs,
+		Vout: outputs,
+	}
 
     //create the ID of the transaction
     tx.SetID()
