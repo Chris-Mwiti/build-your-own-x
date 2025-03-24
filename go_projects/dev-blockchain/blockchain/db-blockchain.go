@@ -168,7 +168,7 @@ func (bc *Blockchain) MineBlock(transactions []*transactions.Transaction){
 	}
 }
 
-func (bc *Blockchain) FindUnspentTransactions(address string) []transactions.Transaction {
+func (bc *Blockchain) FindUnspentTransactions(pubKeyHash []byte) []transactions.Transaction {
 	var unspent []transactions.Transaction
 
 	//stores the spent transactions within a transaction 	
@@ -204,7 +204,7 @@ func (bc *Blockchain) FindUnspentTransactions(address string) []transactions.Tra
 						}
 					}
 
-					if out.CanBeUnlockedWith(address) {
+					if out.IsLockedWithKey(pubKeyHash) {
 						unspent = append(unspent, *tx)
 					}
 
@@ -215,7 +215,7 @@ func (bc *Blockchain) FindUnspentTransactions(address string) []transactions.Tra
 				//if we unlock we append to the spent transactions slice of that transaction the index of the output being referenced
 				if !tx.IsCoinbase() {
 					for _, in := range tx.Vin {
-						if in.CanUnlockOutputWith(address) {
+						if in.UsesKey(pubKeyHash) {
 							inTxId := hex.EncodeToString(in.Txid)
 							spentTXOs[inTxId] = append(spentTXOs[inTxId], in.Vout)
 						}
@@ -228,14 +228,14 @@ func (bc *Blockchain) FindUnspentTransactions(address string) []transactions.Tra
 	return unspent
 }
 
-func (bc *Blockchain) FindUnspentTxo(address string) []transactions.TxOutput{
+func (bc *Blockchain) FindUnspentTxo(pubKeyHash []byte) []transactions.TxOutput{
 	var UTXOS []transactions.TxOutput
 
-	unspentTransactions := bc.FindUnspentTransactions(address)
+	unspentTransactions := bc.FindUnspentTransactions(pubKeyHash)
 
 	for _, tx := range unspentTransactions {
 		for _, out := range tx.Vout {
-			if out.CanBeUnlockedWith(address){
+			if out.IsLockedWithKey(pubKeyHash){
 				UTXOS = append(UTXOS, out)
 			}
 		}
@@ -300,7 +300,7 @@ func (bc *Blockchain) NewUTXOTransaction(from,to string, amount int) *transactio
             input := transactions.TxInput{
                 Txid: txId,
                 Vout: out,
-                ScriptSig: from,
+                Signature: []byte(from),
             }
             inputs = append(inputs, input)
         }
@@ -309,14 +309,14 @@ func (bc *Blockchain) NewUTXOTransaction(from,to string, amount int) *transactio
     //Build a list of outputs
     outputs = append(outputs, transactions.TxOutput{
 		Value: amount,
-		ScriptPubKey: to,
+		PubKeyHash: []byte(to),
 	})
 
     if acc > amount {
 		//we create a change incase the amount exceeds the cumulated amount
         outputs = append(outputs, transactions.TxOutput{
 			Value: acc - amount,
-			ScriptPubKey: from,
+			PubKeyHash: []byte(from),
 		})
     }
 

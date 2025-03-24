@@ -6,7 +6,6 @@ import (
 	"encoding/gob"
 	"fmt"
 	"log"
-
 	"github.com/Chris-Mwiti/build-your-own-x/go-projects/dev-blockchain/wallets"
 )
 
@@ -31,13 +30,13 @@ type TxOutput struct {
     //actually stores "coins"
     Value int
     //locks the transaction with a puzzle
-    ScriptPubKey string //will store user defined wallet addresses for now
+    PubKeyHash []byte //will store user defined wallet addresses for now
 }
 
 type TxInput struct {
     Txid []byte  //store the id of the transaction being referenced
     Vout int //stores an index of an output in the transaction
-    ScriptSig string //provides data to be used in the ScriptPubKey ...if data is correct, the output can be unlocked, and its value can be used to generate new outputs 
+    Signature []byte //provides data to be used in the ScriptPubKey ...if data is correct, the output can be unlocked, and its value can be used to generate new outputs 
     PubKey []byte
 }
 
@@ -70,14 +69,14 @@ func NewCoinbaseTX(to, data string) *Transaction {
     txin := TxInput{
         Txid: []byte{},
         Vout: -1,
-        ScriptSig: data,
+        Signature: []byte(data),
     }
 
     //@todo: implement a proper subsidy strategy
     subsidy := 20;
     txout := TxOutput{
         Value: subsidy,
-        ScriptPubKey: to,
+        PubKeyHash: []byte(to),
     }
 
     tx := Transaction{
@@ -121,4 +120,14 @@ func (in *TxInput) UsesKey(pubKeyHash []byte) bool {
     lockingHash := wallets.HashPubKey(in.PubKey)
 
     return bytes.Compare(lockingHash, pubKeyHash) == 0
+}
+
+func (out *TxOutput) Lock(address []byte) {
+    pubKeyHash := Base58Encode(address)
+    pubKeyHash = pubKeyHash[1 : len(pubKeyHash) - 4]
+    out.PubKeyHash = pubKeyHash
+}
+
+func (out *TxOutput) IsLockedWithKey(pubKeyHash []byte) bool {
+    return bytes.Compare(out.PubKeyHash, pubKeyHash) == 0
 }
