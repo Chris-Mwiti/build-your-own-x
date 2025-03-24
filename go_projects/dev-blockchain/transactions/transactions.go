@@ -6,6 +6,8 @@ import (
 	"encoding/gob"
 	"fmt"
 	"log"
+
+	"github.com/Chris-Mwiti/build-your-own-x/go-projects/dev-blockchain/wallets"
 )
 
 //bitcoin transactions do not store the following:
@@ -36,6 +38,7 @@ type TxInput struct {
     Txid []byte  //store the id of the transaction being referenced
     Vout int //stores an index of an output in the transaction
     ScriptSig string //provides data to be used in the ScriptPubKey ...if data is correct, the output can be unlocked, and its value can be used to generate new outputs 
+    PubKey []byte
 }
 
 //genesis block data
@@ -114,3 +117,8 @@ func (tx *Transaction) IsCoinbase() bool {
 }
 
 
+func (in *TxInput) UsesKey(pubKeyHash []byte) bool {
+    lockingHash := wallets.HashPubKey(in.PubKey)
+
+    return bytes.Compare(lockingHash, pubKeyHash) == 0
+}

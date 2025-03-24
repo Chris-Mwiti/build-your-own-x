@@ -94,6 +94,7 @@ func CreateBlockchain(address string) *Blockchain {
 			log.Panic(err)
 		}
 
+
 		//set the key as the genesis hash and the value as the serialized block version
 		err = b.Put(genesis.Hash, genesis.Serialze())
 		if err != nil {
