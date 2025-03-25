@@ -81,7 +81,10 @@ func (wallet Wallet) GetAddress() []byte {
 	fullPayload := append(versiondedPayload, checksum...)
 	address := Base58Encode(fullPayload)
 
+
 	return address
 } 
+
+
 
 

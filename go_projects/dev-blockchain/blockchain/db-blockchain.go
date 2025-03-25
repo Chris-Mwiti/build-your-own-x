@@ -1,12 +1,14 @@
 package blockchain
 
 import (
+	"bytes"
 	"encoding/hex"
 	"fmt"
 	"log"
 	"os"
-	"github.com/boltdb/bolt"
+	"errors"
 	"github.com/Chris-Mwiti/build-your-own-x/go-projects/dev-blockchain/transactions"
+	"github.com/boltdb/bolt"
 )
 
 type Blockchain struct {
@@ -158,6 +160,8 @@ func (bc *Blockchain) MineBlock(transactions []*transactions.Transaction){
 		if err != nil {
 			log.Panic(err)
 		}
+
+		//set the current tip to point to the newly generated block
 		bc.Tip = newBlock.Hash
 
 		return nil
@@ -197,8 +201,8 @@ func (bc *Blockchain) FindUnspentTransactions(pubKeyHash []byte) []transactions.
 					//if not then we loop over the spent transactions outputs indexex and compare if it matches with out current output index we are
 					//if its true we continue to the next transaction index since our focus is finding the unspent transactions  
 					if spentTXOs[txID] != nil {
-						for _, spentOut := range spentTXOs[txID] {
-							if spentOut == outIdx {
+						for _, spentOutIdx := range spentTXOs[txID] {
+							if spentOutIdx == outIdx {
 								continue Outputs
 							}
 						}
@@ -244,10 +248,10 @@ func (bc *Blockchain) FindUnspentTxo(pubKeyHash []byte) []transactions.TxOutput{
 	return UTXOS
 }
 
-func (bc *Blockchain) FindSpendableOutputs(address string, amount int)(int, map[string][]int){
+func (bc *Blockchain) FindSpendableOutputs(pubKeyHash []byte, amount int)(int, map[string][]int){
 	//stores the unspent outputs
 	spendableOutputs := make(map[string][]int)
-	unspentTxs := bc.FindUnspentTransactions(address)
+	unspentTxs := bc.FindUnspentTransactions(pubKeyHash)
 	accumulated := 0
 
 	//here we loop over all collected unspent transactions
@@ -258,7 +262,7 @@ func (bc *Blockchain) FindSpendableOutputs(address string, amount int)(int, map[
 			txID := hex.EncodeToString(tx.ID)
 
 			for outIdx, out := range tx.Vout {
-				if out.CanBeUnlockedWith(address) && accumulated < amount {
+				if out.IsLockedWithKey(pubKeyHash) && accumulated < amount {
 					accumulated += out.Value
 					spendableOutputs[txID] = append(spendableOutputs[txID], outIdx)
 				}			
@@ -272,10 +276,34 @@ func (bc *Blockchain) FindSpendableOutputs(address string, amount int)(int, map[
 	return accumulated, spendableOutputs
 }
 
+func (bc *Blockchain) FindTransactions(ID []byte) (transactions.Transaction, error){
+	bci := bc.Iterator()
+
+	for {
+		block, err := bci.Next()
+		if err != nil {
+			log.Panic(err)
+		}
+
+		for _, tx := range block.Transaction {
+			//compare the provided transaction against each transactions in the blocks
+			if bytes.Compare(tx.ID, ID) == 0{
+				return *tx, nil
+			}
+		}
+
+		if len(block.PrevBlockHash) == 0 {
+			break
+		}
+	}
+
+	return transactions.Transaction{}, errors.New("Transaction is not found")
+}
+
 
 //sending coins...here we create a new transaction, put it in a block
 //mine the block
-func (bc *Blockchain) NewUTXOTransaction(from,to string, amount int) *transactions.Transaction {
+func (bc *Blockchain) NewUTXOTransaction(from,to []byte, amount int) *transactions.Transaction {
     //stores the inputs of the transaction from
     var inputs []transactions.TxInput
     //stores the outputs after a transaction is made
@@ -300,7 +328,7 @@ func (bc *Blockchain) NewUTXOTransaction(from,to string, amount int) *transactio
             input := transactions.TxInput{
                 Txid: txId,
                 Vout: out,
-                Signature: []byte(from),
+                Signature: from,
             }
             inputs = append(inputs, input)
         }
@@ -309,14 +337,14 @@ func (bc *Blockchain) NewUTXOTransaction(from,to string, amount int) *transactio
     //Build a list of outputs
     outputs = append(outputs, transactions.TxOutput{
 		Value: amount,
-		PubKeyHash: []byte(to),
+		PubKeyHash: to,
 	})
 
     if acc > amount {
 		//we create a change incase the amount exceeds the cumulated amount
         outputs = append(outputs, transactions.TxOutput{
 			Value: acc - amount,
-			PubKeyHash: []byte(from),
+			PubKeyHash: from,
 		})
     }
 

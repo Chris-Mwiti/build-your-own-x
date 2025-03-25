@@ -97,15 +97,6 @@ func NewCoinbaseTX(to, data string) *Transaction {
 //unspent transactions means that these outputs weren't referenced in any inputs
 //we can only unlock those that can be unlocked by the key we own
 
-//@todo: to be defined in the near future
-func (in *TxInput) CanUnlockOutputWith(unlockingData string) bool {
-    return in.ScriptSig == unlockingData;
-}
-
-func (out *TxOutput) CanBeUnlockedWith(unlockingData string) bool {
-    return out.ScriptPubKey == unlockingData
-}
-
 
 //checks if a transaction is a coinbase
 func (tx *Transaction) IsCoinbase() bool {
@@ -123,7 +114,7 @@ func (in *TxInput) UsesKey(pubKeyHash []byte) bool {
 }
 
 func (out *TxOutput) Lock(address []byte) {
-    pubKeyHash := Base58Encode(address)
+    pubKeyHash := wallets.Base58Encode(address)
     pubKeyHash = pubKeyHash[1 : len(pubKeyHash) - 4]
     out.PubKeyHash = pubKeyHash
 }
