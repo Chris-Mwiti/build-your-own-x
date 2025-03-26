@@ -71,7 +71,7 @@ func (cli *Cli) Run(){
 			log.Fatal(err)
 		}		
 	case "createwallet":
-		err := createChainCmd.Parse(os.Args[2:])
+		err := createWalletCmd.Parse(os.Args[2:])
 		if err != nil {
 			log.Fatal(err)
 		}
