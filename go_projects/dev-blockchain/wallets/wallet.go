@@ -1,7 +1,6 @@
 package wallets
 
 import (
-	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/sha256"
@@ -15,7 +14,7 @@ const version = 00
 //this is the case scenario of a wallet:
 //a wallet contains the following:
 type Wallet struct {
-	PrivateKey ecdsa.PrivateKey
+	PrivateKey []byte
 	PublicKey []byte
 }
 
@@ -23,19 +22,20 @@ type Wallets struct {
 	Wallets map[string]*Wallet
 }
 
+//step 1: create a new key pair of keys(private, public)
 //creates a new keypair(private key, public key)
 //public keys are a point inside the curve
-func newKeyPair()(ecdsa.PrivateKey, []byte){
+func newKeyPair()([]byte, []byte){
 	curve := elliptic.P256()
-	private, err := ecdsa.GenerateKey(curve,rand.Reader)
+	private, x, y, err := elliptic.GenerateKey(curve, rand.Reader)
 
 	if err != nil {
 		log.Panic(err)
 	}
 
-	pubKey := append(private.PublicKey.X.Bytes(), private.PublicKey.Y.Bytes()...)
+	pubKey := append(x.Bytes(), y.Bytes()...)
 
-	return *private, pubKey
+	return private, pubKey
 }
 
 //creation of a new wallet 
@@ -68,7 +68,7 @@ func checksum(payload []byte) []byte {
 	firstSHA := sha256.Sum256(payload)
 	secondSHA := sha256.Sum256(firstSHA[:])
 
-	return secondSHA[:addressChecksumLen]
+	return secondSHA[:4]
 
 }
 

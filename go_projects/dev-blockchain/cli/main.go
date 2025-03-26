@@ -7,9 +7,9 @@ import (
 	"os"
 	"strconv"
 
-
 	"github.com/Chris-Mwiti/build-your-own-x/go-projects/dev-blockchain/blockchain"
 	"github.com/Chris-Mwiti/build-your-own-x/go-projects/dev-blockchain/transactions"
+	"github.com/Chris-Mwiti/build-your-own-x/go-projects/dev-blockchain/wallets"
 )
 
 
@@ -38,6 +38,13 @@ func (cli *Cli) Run(){
 	senderAddress := sendBalanceCmd.String("from", "", " sender wallet address")
 	receiverAddress := sendBalanceCmd.String("to", "", " receiver wallet address")
 	amountToSend := sendBalanceCmd.Int("amount", 0, "amount to be sent")
+
+
+	//wallets commands
+	createWalletCmd := flag.NewFlagSet("createwallet", flag.ExitOnError)
+
+	//
+
 	//loop over the args and check for the commands and their subsets are already parsed
 	switch os.Args[1] {
 	case "printchain":
@@ -63,7 +70,11 @@ func (cli *Cli) Run(){
 		if err != nil {
 			log.Fatal(err)
 		}		
-
+	case "createwallet":
+		err := createChainCmd.Parse(os.Args[2:])
+		if err != nil {
+			log.Fatal(err)
+		}
 	default:
 		cli.printUsage()
 		os.Exit(1)
@@ -95,6 +106,10 @@ func (cli *Cli) Run(){
 	
 		}
 		cli.send(*senderAddress, *receiverAddress, *amountToSend)
+	}
+
+	if createWalletCmd.Parsed(){
+		cli.createWallet()
 	}
 
 
@@ -139,7 +154,7 @@ func (cli *Cli) getBalance(address string){
 	defer bc.Db.Close()
 
 	balance := 0
-	UTXOs := bc.FindUnspentTxo(address)
+	UTXOs := bc.FindUnspentTxo([]byte(address))
 
 	for _, out := range UTXOs {
 		balance += out.Value
@@ -148,6 +163,7 @@ func (cli *Cli) getBalance(address string){
 	fmt.Printf("Balance of %s : %d\n", address, balance)
 }
 
+
 func (cli *Cli) send(from, to string, amount int){
 	//initialize the blockchain
 	bc := blockchain.NewBlockChain(from)
@@ -155,12 +171,18 @@ func (cli *Cli) send(from, to string, amount int){
 	defer bc.Db.Close()
 
 	//create a new transaction
-	tx := bc.NewUTXOTransaction(from, to, amount) 
+	tx := bc.NewUTXOTransaction([]byte(from), []byte(to), amount) 
 
 	bc.MineBlock([]*transactions.Transaction{tx})
 
 	fmt.Println("Success !")
 
+}
+
+func (cli *Cli) createWallet(){
+	wallet := wallets.NewWallet()
+
+	fmt.Printf("Your address: %s\n", wallet.GetAddress())
 }
 
 //prints the usage of the commands
