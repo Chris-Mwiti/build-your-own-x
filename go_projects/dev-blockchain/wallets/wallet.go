@@ -1,15 +1,19 @@
 package wallets
 
 import (
+	"bytes"
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/sha256"
+	"encoding/gob"
 	"log"
+	"os"
 
 	"golang.org/x/crypto/ripemd160"
 )
 
 const version = byte(0x00)
+const walletFile = "databases/wallet.dat"
 
 //this is the case scenario of a wallet:
 //a wallet contains the following:
@@ -20,6 +24,26 @@ type Wallet struct {
 
 type Wallets struct {
 	Wallets map[string]*Wallet
+}
+
+func (w Wallet) SaveToFile(){
+	var walletContent bytes.Buffer
+
+	//create a new encoder to encode the data
+	encoder := gob.NewEncoder(&walletContent)
+
+	err := encoder.Encode(w)
+
+	if err != nil {
+		log.Panicf("error encoding wallet content: %#v", err)
+	}
+
+	//write the bytes wallet content to a file
+	err = os.WriteFile(walletFile, walletContent.Bytes(), 0644)
+
+	if err != nil {
+		log.Panicf("error writing wallet to file: %v", err)
+	}
 }
 
 //step 1: create a new key pair of keys(private, public)

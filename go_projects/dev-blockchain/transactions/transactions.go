@@ -89,6 +89,8 @@ func NewCoinbaseTX(to, data string) *Transaction {
     //set the id for the transaction
     tx.SetID()
 
+    fmt.Printf("New transactions: %#v", tx.Vout)
+
     return &tx
 }
 
@@ -107,18 +109,25 @@ func (tx *Transaction) IsCoinbase() bool {
 }
 
 
+
+//an input has a pubkey field to identify the receiver of the transaction
+//and a signature to verify the sender of the transaction
 func (in *TxInput) UsesKey(pubKeyHash []byte) bool {
     lockingHash := wallets.HashPubKey(in.PubKey)
 
-    return bytes.Compare(lockingHash, pubKeyHash) == 0
+    return bytes.Equal(lockingHash, pubKeyHash) 
 }
 
+//locks the output of a transaction with memonic base58 wallet address
 func (out *TxOutput) Lock(address []byte) {
     pubKeyHash := wallets.Base58Encode(address)
+    //slices of the checksum of the transaction and only returns (version & pubKeyHash)
     pubKeyHash = pubKeyHash[1 : len(pubKeyHash) - 4]
     out.PubKeyHash = pubKeyHash
 }
 
+
+//verify's whether the output of a transaction has been locked with the specified pubKey
 func (out *TxOutput) IsLockedWithKey(pubKeyHash []byte) bool {
-    return bytes.Compare(out.PubKeyHash, pubKeyHash) == 0
+    return bytes.Equal(out.PubKeyHash, pubKeyHash) 
 }

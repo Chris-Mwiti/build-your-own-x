@@ -119,7 +119,9 @@ func (cli *Cli) Run(){
 
 //proxy func to print chains in the blockchain
 func (cli *Cli) printChain() {
-	bci := cli.Bc.Iterator()
+	bc := blockchain.NewBlockChain("")
+
+	bci := bc.Iterator()
 
 	//iterates through the block in the chain
 	for {
@@ -156,6 +158,8 @@ func (cli *Cli) getBalance(address string){
 	balance := 0
 	UTXOs := bc.FindUnspentTxo([]byte(address))
 
+	fmt.Printf("Unspent transactions: %#v", UTXOs)
+
 	for _, out := range UTXOs {
 		balance += out.Value
 	}
@@ -168,11 +172,13 @@ func (cli *Cli) send(from, to string, amount int){
 	//initialize the blockchain
 	bc := blockchain.NewBlockChain(from)
 
+	//close the db after all operations of the function are completed
 	defer bc.Db.Close()
 
 	//create a new transaction
 	tx := bc.NewUTXOTransaction([]byte(from), []byte(to), amount) 
 
+	//validate the block and add it to the chain
 	bc.MineBlock([]*transactions.Transaction{tx})
 
 	fmt.Println("Success !")
@@ -181,8 +187,8 @@ func (cli *Cli) send(from, to string, amount int){
 
 func (cli *Cli) createWallet(){
 	wallet := wallets.NewWallet()
-
 	fmt.Printf("Your address: %s\n", wallet.GetAddress())
+	wallet.SaveToFile()
 }
 
 //prints the usage of the commands
@@ -191,6 +197,7 @@ func (cli *Cli) printUsage() {
 	fmt.Println(" printchain - print all the blocks of the blockchain")
 	fmt.Println("createchain - creates a chain if none exists")
 	fmt.Println("getbalance -address fetches the coins balance for a specific address")
+	fmt.Println("createwallet creates new public and private key pair")
 }
 
 

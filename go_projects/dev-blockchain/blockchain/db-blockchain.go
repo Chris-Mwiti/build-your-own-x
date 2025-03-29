@@ -209,6 +209,7 @@ func (bc *Blockchain) FindUnspentTransactions(pubKeyHash []byte) []transactions.
 					}
 
 					if out.IsLockedWithKey(pubKeyHash) {
+						fmt.Println("Appending unspent output...")
 						unspent = append(unspent, *tx)
 					}
 
@@ -287,7 +288,7 @@ func (bc *Blockchain) FindTransactions(ID []byte) (transactions.Transaction, err
 
 		for _, tx := range block.Transaction {
 			//compare the provided transaction against each transactions in the blocks
-			if bytes.Compare(tx.ID, ID) == 0{
+			if bytes.Equal(tx.ID, ID){
 				return *tx, nil
 			}
 		}
@@ -297,7 +298,7 @@ func (bc *Blockchain) FindTransactions(ID []byte) (transactions.Transaction, err
 		}
 	}
 
-	return transactions.Transaction{}, errors.New("Transaction is not found")
+	return transactions.Transaction{}, errors.New("transaction is not found")
 }
 
 
@@ -328,6 +329,9 @@ func (bc *Blockchain) NewUTXOTransaction(from,to []byte, amount int) *transactio
             input := transactions.TxInput{
                 Txid: txId,
                 Vout: out,
+				//@todo
+				//remap the signature to contain not only the address
+				//but also some bit of the tranaction including data
                 Signature: from,
             }
             inputs = append(inputs, input)
@@ -343,7 +347,7 @@ func (bc *Blockchain) NewUTXOTransaction(from,to []byte, amount int) *transactio
     if acc > amount {
 		//we create a change incase the amount exceeds the cumulated amount
         outputs = append(outputs, transactions.TxOutput{
-			Value: acc - amount,
+			Value: (acc - amount),
 			PubKeyHash: from,
 		})
     }
