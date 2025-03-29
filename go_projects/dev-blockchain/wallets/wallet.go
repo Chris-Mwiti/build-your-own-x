@@ -9,7 +9,7 @@ import (
 	"golang.org/x/crypto/ripemd160"
 )
 
-const version = 00
+const version = byte(0x00)
 
 //this is the case scenario of a wallet:
 //a wallet contains the following:
