@@ -6,6 +6,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/gob"
+	"errors"
 	"log"
 	"os"
 
@@ -63,14 +64,20 @@ func newKeyPair()([]byte, []byte){
 }
 
 //creation of a new wallet 
-func NewWallet() *Wallet{
+func NewWallet() (*Wallet, error){
+
+	//validate if the wallet already exists
+	if _, err := os.Stat(walletFile); !os.IsNotExist(err){
+		return nil, errors.New("wallet already exists")
+	}
+
 	private, public := newKeyPair()
 	wallet := Wallet{
 		PrivateKey: private,
 		PublicKey: public,
 	}
 
-	return &wallet
+	return &wallet, nil
 }
 
 func HashPubKey(pubkey []byte) []byte{

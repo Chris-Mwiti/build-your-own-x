@@ -186,9 +186,15 @@ func (cli *Cli) send(from, to string, amount int){
 }
 
 func (cli *Cli) createWallet(){
-	wallet := wallets.NewWallet()
-	fmt.Printf("Your address: %s\n", wallet.GetAddress())
-	wallet.SaveToFile()
+	wallet,err := wallets.NewWallet()
+
+	if err == nil {
+		fmt.Printf("Your address: %s\n", wallet.GetAddress())
+		wallet.SaveToFile()
+	}else {
+		log.Panicln(err.Error())
+		os.Exit(1)
+	}
 }
 
 //prints the usage of the commands
