@@ -2,6 +2,7 @@ package wallets
 
 import (
 	"bytes"
+	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/sha256"
@@ -19,8 +20,8 @@ const walletFile = "databases/wallet.dat"
 //this is the case scenario of a wallet:
 //a wallet contains the following:
 type Wallet struct {
-	PrivateKey []byte
-	PublicKey []byte
+	PrivateKey []ecdsa.PrivateKey
+	PublicKey []ecdsa.PublicKey
 }
 
 type Wallets struct {
@@ -50,17 +51,16 @@ func (w Wallet) SaveToFile(){
 //step 1: create a new key pair of keys(private, public)
 //creates a new keypair(private key, public key)
 //public keys are a point inside the curve
-func newKeyPair()([]byte, []byte){
+func newKeyPair()(ecdsa.PrivateKey, ecdsa.PublicKey){
 	curve := elliptic.P256()
-	private, x, y, err := elliptic.GenerateKey(curve, rand.Reader)
+	private,err := ecdsa.GenerateKey(curve, rand.Reader)
 
 	if err != nil {
 		log.Panic(err)
 	}
 
-	pubKey := append(x.Bytes(), y.Bytes()...)
 
-	return private, pubKey
+	return *private, private.PublicKey
 }
 
 //creation of a new wallet 
