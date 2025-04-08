@@ -26,6 +26,7 @@ type ProofOfWork struct {
 	target *big.Int
 }
 
+//creates a new block that has to be validated inorder to be put in the chain
 func NewProofOfWork(b *Block) *ProofOfWork {
 	target := big.NewInt(1)
 	//@todo: confirm whether this will actually work

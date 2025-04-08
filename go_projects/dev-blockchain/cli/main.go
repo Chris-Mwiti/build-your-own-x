@@ -26,6 +26,7 @@ func (cli *Cli) Run(){
 	createChainCmd := flag.NewFlagSet("createchain", flag.ExitOnError)
 	getBalanceCmd := flag.NewFlagSet("getbalance", flag.ExitOnError)
 	sendBalanceCmd := flag.NewFlagSet("send", flag.ExitOnError)
+	listAddressCmd := flag.NewFlagSet("listaddress", flag.ExitOnError)
 
 
 	//used to hold the address of the newly created chain	
@@ -75,6 +76,12 @@ func (cli *Cli) Run(){
 		if err != nil {
 			log.Fatal(err)
 		}
+	
+	case "listaddress":
+		err := listAddressCmd.Parse(os.Args[2:])
+		if err != nil {
+			log.Fatal(err)
+		}
 	default:
 		cli.printUsage()
 		os.Exit(1)
@@ -110,6 +117,10 @@ func (cli *Cli) Run(){
 
 	if createWalletCmd.Parsed(){
 		cli.createWallet()
+	}
+
+	if listAddressCmd.Parsed(){
+		cli.listWalletsAddresses()
 	}
 
 
@@ -186,14 +197,22 @@ func (cli *Cli) send(from, to string, amount int){
 }
 
 func (cli *Cli) createWallet(){
-	wallet,err := wallets.NewWallet()
+	wallets := wallets.WalletsList()
 
-	if err == nil {
-		fmt.Printf("Your address: %s\n", wallet.GetAddress())
-		wallet.SaveToFile()
-	}else {
-		log.Panicln(err.Error())
-		os.Exit(1)
+	address := wallets.CreateWallet()
+
+	wallets.SaveToFile()
+
+
+	fmt.Printf("Your new address: %s\n", address)
+}
+
+func (cli *Cli) listWalletsAddresses(){
+	wallets := wallets.WalletsList()
+	addresses := wallets.ListAddress()
+
+	for _, address := range addresses {
+		fmt.Println(address)
 	}
 }
 
@@ -204,6 +223,7 @@ func (cli *Cli) printUsage() {
 	fmt.Println("createchain - creates a chain if none exists")
 	fmt.Println("getbalance -address fetches the coins balance for a specific address")
 	fmt.Println("createwallet creates new public and private key pair")
+	fmt.Println("listaddress -used to list all the available address in the wallet")
 }
 
 
