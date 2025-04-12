@@ -39,11 +39,7 @@ func (ws Wallets) SaveToFile(){
 	err := encoder.Encode(ws)
 
 	if err != nil {
-		log.Panicf("Wallets creation has occured an error")
-	}
-
-	if err != nil {
-		log.Panicf("error encoding wallet content: %#v", err)
+		log.Panicf("Error encoding wallet: %v", err)
 	}
 
 	//write the bytes wallet content to a file
@@ -97,7 +93,6 @@ func newKeyPair()(ecdsa.PrivateKey, ecdsa.PublicKey){
 
 //creation of a new wallet 
 func NewWallet() (*Wallet){
-
 	private, public := newKeyPair()
 	wallet := Wallet{
 		PrivateKey: private,
@@ -135,6 +130,8 @@ func (ws *Wallets) ListAddress() ([]string){
 func (ws *Wallets) CreateWallet() string {
 	//create a new wallet with the public and private key and obtain the address
 	wallet := NewWallet()
+
+	//load wallets stored content
 	address := fmt.Sprintf("%s", wallet.GetAddress())
 
 
