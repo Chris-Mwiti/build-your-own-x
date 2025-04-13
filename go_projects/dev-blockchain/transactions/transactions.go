@@ -41,7 +41,7 @@ type TxInput struct {
 }
 
 //genesis block data
-const GenesisCoinbaseData = "This is the first block created in the blockchain"
+const GenesisCoinbaseData = "17th February 2025"
 
 func (tx *Transaction) SetID(){
     var encoded bytes.Buffer;
