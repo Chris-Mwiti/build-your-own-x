@@ -2,8 +2,7 @@ package task
 
 import (
 	"time"
-
-	"github.com/ethereum/go-ethereum/p2p/nat"
+	"github.com/docker/go-connections/nat"
 	"github.com/google/uuid"
 )
 
@@ -27,7 +26,7 @@ type Task struct {
 	Image string //represents the docker image
 	Memory int //resource metric
 	Disk int //resource metric
-	ExposedPorts nat.PorSet //allocation of proper ports for the task
+	ExposedPorts nat.PortSet //allocation of proper ports for the task
 	PortBindings map[string]string //allcation of proper ports foor the task
 	RestartPolicy string
 	StartTime  time.Time
