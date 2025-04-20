@@ -304,6 +304,7 @@ func (bc *Blockchain) FindTransactions(ID []byte) (transactions.Transaction, err
 
 //sending coins...here we create a new transaction, put it in a block
 //mine the block
+//@todo: remember to update the parameters
 func (bc *Blockchain) NewUTXOTransaction(from,to []byte, amount int) *transactions.Transaction {
     //stores the inputs of the transaction from
     var inputs []transactions.TxInput
