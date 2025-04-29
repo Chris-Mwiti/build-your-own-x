@@ -148,6 +148,11 @@ func (cli *Cli) printChain() {
 		fmt.Printf("POW: %s\n", strconv.FormatBool(pow.Validate()))
 		fmt.Println()
 
+		//print the block transactions
+		for _, tx := range block.Transaction {
+			fmt.Println(tx)
+		}
+
 		//checks if we have reached the genesis block
 		if len(block.PrevBlockHash) == 0 {
 			break

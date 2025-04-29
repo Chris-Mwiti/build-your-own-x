@@ -6,6 +6,8 @@ import (
 	"encoding/gob"
 	"fmt"
 	"log"
+	"strings"
+
 	"github.com/Chris-Mwiti/build-your-own-x/go-projects/dev-blockchain/wallets"
 )
 
@@ -106,6 +108,32 @@ func (tx *Transaction) IsCoinbase() bool {
         return false
     }
     return tx.Vin[0].Vout == -1
+}
+
+
+//stringify the transaction to make it human readable
+func (tx Transaction) String() (string) {
+    var lines []string
+
+
+    //prepend the transaction id to the begining of line
+    lines = append(lines, fmt.Sprintf("Transaction Id: %x",tx.ID ))
+
+    //here we create information txt structure for the inputs
+    for i, input := range tx.Vin {
+        lines = append(lines, fmt.Sprintf("Input: %d", i))
+        lines = append(lines, fmt.Sprintf("TxInputId: %x", input.Txid))
+        lines = append(lines, fmt.Sprintf("Output reference: %d", input.Vout))
+        lines = append(lines, fmt.Sprintf("ScriptSig: %s", input.Signature))
+    }
+
+    for i, outputs := range tx.Vout {
+        lines = append(lines, fmt.Sprintf("Output: %d", i))
+        lines = append(lines, fmt.Sprintf("Value: %d", outputs.Value))
+        lines = append(lines, fmt.Sprintf("Script: %s", outputs.PubKeyHash))
+    }
+
+    return strings.Join(lines, "\n")
 }
 
 
