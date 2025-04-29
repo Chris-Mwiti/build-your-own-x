@@ -172,7 +172,11 @@ func (cli *Cli) getBalance(address string){
 	defer bc.Db.Close()
 
 	balance := 0
-	UTXOs := bc.FindUnspentTxo([]byte(address))
+	//get the pubkey hash of the address
+	pubKeyHash := wallets.Base58Decode([]byte(address))
+	//truncate the checksum attribute of the address
+	pubKeyHash = pubKeyHash[1:len(pubKeyHash) - 4]
+	UTXOs := bc.FindUnspentTxo(pubKeyHash)
 
 	fmt.Printf("Unspent transactions: %#v", UTXOs)
 
