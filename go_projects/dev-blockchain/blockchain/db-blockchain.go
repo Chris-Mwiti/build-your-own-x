@@ -172,6 +172,7 @@ func (bc *Blockchain) MineBlock(transactions []*transactions.Transaction){
 	}
 }
 
+//@todo: Optimize the functionality O^3 time complexity
 func (bc *Blockchain) FindUnspentTransactions(pubKeyHash []byte) []transactions.Transaction {
 	var unspent []transactions.Transaction
 

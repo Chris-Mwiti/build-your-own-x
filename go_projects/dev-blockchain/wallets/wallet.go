@@ -16,7 +16,7 @@ const walletFile = "databases/wallet.dat"
 //a wallet contains the following:
 type Wallet struct {
 	PrivateKey ecdsa.PrivateKey
-	PublicKey ecdsa.PublicKey
+	PublicKey []byte 
 }
 
 
@@ -25,7 +25,7 @@ type Wallet struct {
 //step 1: create a new key pair of keys(private, public)
 //creates a new keypair(private key, public key)
 //public keys are a point inside the curve
-func newKeyPair()(ecdsa.PrivateKey, ecdsa.PublicKey){
+func newKeyPair()(ecdsa.PrivateKey, []byte){
 	curve := elliptic.P256()
 	private,err := ecdsa.GenerateKey(curve, rand.Reader)
 
@@ -33,8 +33,10 @@ func newKeyPair()(ecdsa.PrivateKey, ecdsa.PublicKey){
 		log.Panic(err)
 	}
 
+	pubKey := append(private.PublicKey.X.Bytes(), private.PublicKey.Y.Bytes()...)
 
-	return *private, private.PublicKey
+
+	return *private, pubKey
 }
 
 //creation of a new wallet 
@@ -75,11 +77,9 @@ func checksum(payload []byte) []byte {
 //creates a human readable address for the wallet public address
 func (wallet Wallet) GetAddress() []byte {
 
-	//wallet address public key 
-	publicKey := append(wallet.PublicKey.X.Bytes(), wallet.PublicKey.Y.Bytes()...)
 
 	//hash the public key
-	pubKeyHash := HashPubKey(publicKey)
+	pubKeyHash := HashPubKey(wallet.PublicKey)
 
 	//append the version payload as a prefix
 	versiondedPayload := append([]byte{version}, pubKeyHash...)
