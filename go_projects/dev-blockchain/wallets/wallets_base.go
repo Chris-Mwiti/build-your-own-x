@@ -61,17 +61,14 @@ func (ws *Wallets) LoadFromFile() (error) {
 
 }
 //returns the already created wallets and loads them as a list of wallets
-func WalletsList() *Wallets {
+func WalletsList() (*Wallets, error) {
 	wallets := Wallets{}
 
 	wallets.Wallets= make(map[string]*Wallet)
 
 	err := wallets.LoadFromFile();
-	if err != nil {
-		log.Panic("Wallets file doesn't exist")
-	}
 
-	return &wallets
+	return &wallets, err 
 }
 
 func (ws *Wallets) ListAddress() ([]string){

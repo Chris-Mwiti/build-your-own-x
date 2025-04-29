@@ -197,7 +197,11 @@ func (cli *Cli) send(from, to string, amount int){
 }
 
 func (cli *Cli) createWallet(){
-	wallets := wallets.WalletsList()
+	wallets,err := wallets.WalletsList()
+
+	if err != nil {
+		log.Panicf("Error while creating wallet: %v", err)
+	}
 
 	address := wallets.CreateWallet()
 
@@ -208,7 +212,11 @@ func (cli *Cli) createWallet(){
 }
 
 func (cli *Cli) listWalletsAddresses(){
-	wallets := wallets.WalletsList()
+	wallets, err := wallets.WalletsList()
+
+	if err != nil {
+		log.Panicf("Error while retrieving wallet details: %v", err)
+	}
 	addresses := wallets.ListAddress()
 
 	for _, address := range addresses {
