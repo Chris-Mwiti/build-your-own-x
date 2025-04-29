@@ -76,15 +76,11 @@ func NewCoinbaseTX(to, data string) *Transaction {
 
     //@todo: implement a proper subsidy strategy
     subsidy := 20;
-    txout := TxOutput{
-        Value: subsidy,
-        PubKeyHash: []byte(to),
-    }
-
+    txout := NewTxOutput(subsidy, to) 
     tx := Transaction{
         ID: nil,
         Vin: []TxInput{txin},
-        Vout: []TxOutput{txout},
+        Vout: []TxOutput{*txout},
     }
     
 
@@ -124,16 +120,28 @@ func (tx Transaction) String() (string) {
         lines = append(lines, fmt.Sprintf("Input: %d", i))
         lines = append(lines, fmt.Sprintf("TxInputId: %x", input.Txid))
         lines = append(lines, fmt.Sprintf("Output reference: %d", input.Vout))
-        lines = append(lines, fmt.Sprintf("ScriptSig: %s", input.Signature))
+        lines = append(lines, fmt.Sprintf("ScriptSig: %x", input.Signature))
     }
 
     for i, outputs := range tx.Vout {
         lines = append(lines, fmt.Sprintf("Output: %d", i))
         lines = append(lines, fmt.Sprintf("Value: %d", outputs.Value))
-        lines = append(lines, fmt.Sprintf("Script: %s", outputs.PubKeyHash))
+        lines = append(lines, fmt.Sprintf("Script: %x", outputs.PubKeyHash))
     }
 
     return strings.Join(lines, "\n")
+}
+
+func NewTxOutput(value int, address string) (*TxOutput) {
+    txo := TxOutput{
+        Value: value,
+        PubKeyHash: nil,
+    }
+
+    //lock the transaction with the provided address
+    txo.Lock([]byte(address))
+
+    return &txo
 }
 
 

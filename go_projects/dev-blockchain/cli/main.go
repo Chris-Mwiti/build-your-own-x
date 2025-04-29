@@ -192,7 +192,7 @@ func (cli *Cli) send(from, to string, amount int){
 	defer bc.Db.Close()
 
 	//create a new transaction
-	tx := bc.NewUTXOTransaction([]byte(from), []byte(to), amount) 
+	tx := bc.NewUTXOTransaction(from, to, amount)  
 
 	//validate the block and add it to the chain
 	bc.MineBlock([]*transactions.Transaction{tx})

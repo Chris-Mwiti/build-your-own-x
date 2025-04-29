@@ -3,11 +3,13 @@ package blockchain
 import (
 	"bytes"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"log"
 	"os"
-	"errors"
+
 	"github.com/Chris-Mwiti/build-your-own-x/go-projects/dev-blockchain/transactions"
+	"github.com/Chris-Mwiti/build-your-own-x/go-projects/dev-blockchain/wallets"
 	"github.com/boltdb/bolt"
 )
 
@@ -306,14 +308,23 @@ func (bc *Blockchain) FindTransactions(ID []byte) (transactions.Transaction, err
 //sending coins...here we create a new transaction, put it in a block
 //mine the block
 //@todo: remember to update the parameters
-func (bc *Blockchain) NewUTXOTransaction(from,to []byte, amount int) *transactions.Transaction {
+func (bc *Blockchain) NewUTXOTransaction(from,to string, amount int) *transactions.Transaction {
     //stores the inputs of the transaction from
     var inputs []transactions.TxInput
     //stores the outputs after a transaction is made
     var outputs []transactions.TxOutput
 
+	walletsList, err := wallets.WalletsList()
+
+	if err != nil {
+		log.Panicf("Error while generating wallets list")
+	}
+
+	wallet:= walletsList.GetWallet(from)
+	pubKeyHash := wallets.HashPubKey(wallet.PublicKey)
+
     //checks and extracts the spendable outputs in a transaction
-    acc, validOutputs := bc.FindSpendableOutputs(from, amount)
+    acc, validOutputs := bc.FindSpendableOutputs(pubKeyHash, amount)
 
     if acc < amount {
         log.Panic("ERROR: Not enough funds")
@@ -334,24 +345,18 @@ func (bc *Blockchain) NewUTXOTransaction(from,to []byte, amount int) *transactio
 				//@todo
 				//remap the signature to contain not only the address
 				//but also some bit of the tranaction including data
-                Signature: from,
+                Signature: wallet.PublicKey,
             }
             inputs = append(inputs, input)
         }
     }
 
     //Build a list of outputs
-    outputs = append(outputs, transactions.TxOutput{
-		Value: amount,
-		PubKeyHash: to,
-	})
+    outputs = append(outputs, *transactions.NewTxOutput(amount, to))
 
     if acc > amount {
 		//we create a change incase the amount exceeds the cumulated amount
-        outputs = append(outputs, transactions.TxOutput{
-			Value: (acc - amount),
-			PubKeyHash: from,
-		})
+        outputs = append(outputs, *transactions.NewTxOutput((acc - amount), from))
     }
 
     //create a new transaction based on the generated outputs and inputs

@@ -58,7 +58,7 @@ func HashPubKey(pubkey []byte) []byte{
 	_,err := RIPEMD160Hasher.Write(publicSHA256[:])
 
 	if err != nil {
-		log.Panicf("Error[HashPubKey]: %v", err)
+		log.Panicf("Error while hashing the public key: %v", err)
 	}
 
 	publicRIPEMD160 := RIPEMD160Hasher.Sum(nil)
