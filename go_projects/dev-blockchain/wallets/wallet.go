@@ -19,9 +19,6 @@ type Wallet struct {
 	PublicKey []byte 
 }
 
-
-
-
 //step 1: create a new key pair of keys(private, public)
 //creates a new keypair(private key, public key)
 //public keys are a point inside the curve
@@ -76,8 +73,6 @@ func checksum(payload []byte) []byte {
 
 //creates a human readable address for the wallet public address
 func (wallet Wallet) GetAddress() []byte {
-
-
 	//hash the public key
 	pubKeyHash := HashPubKey(wallet.PublicKey)
 

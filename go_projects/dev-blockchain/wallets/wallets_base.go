@@ -3,10 +3,9 @@ package wallets
 import (
 	"bytes"
 	"encoding/gob"
+	"fmt"
 	"log"
 	"os"
-	"crypto/elliptic"
-	"fmt"
 )
 
 type Wallets struct {
@@ -18,7 +17,6 @@ func (ws Wallets) SaveToFile(){
 	var walletContent bytes.Buffer
 
 	//create a new encoder to encode the data
-	gob.Register(elliptic.P256())
 	encoder := gob.NewEncoder(&walletContent)
 
 	err := encoder.Encode(ws)
@@ -43,16 +41,15 @@ func (ws *Wallets) LoadFromFile() (error) {
 
 	fileContent, err := os.ReadFile(walletFile)
 	if err != nil {
-		log.Panicf("Error while loading wallet file: %v", err)
+		return err
 	}
 
 	var wallet Wallets
-	gob.Register(elliptic.P256())
 	decoder := gob.NewDecoder(bytes.NewReader(fileContent))
 	err = decoder.Decode(&wallet)
 
 	if err != nil {
-		log.Panicf("Error while decoding wallet file: %v", err)
+		return err
 	}
 
 	ws.Wallets = wallet.Wallets

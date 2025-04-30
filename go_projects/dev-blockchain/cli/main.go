@@ -3,6 +3,7 @@ package cli
 import (
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"strconv"
@@ -209,7 +210,13 @@ func (cli *Cli) createWallet(){
 	wallets,err := wallets.WalletsList()
 
 	if err != nil {
-		log.Panicf("Error while creating wallet: %v", err)
+		//check if the error is an EOF 
+		if err == io.EOF{
+			address := wallets.CreateWallet()
+			wallets.SaveToFile()
+			fmt.Printf("Your new address: %s\n", address)
+			return
+		}
 	}
 
 	address := wallets.CreateWallet()
