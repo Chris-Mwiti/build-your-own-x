@@ -2,7 +2,6 @@ package wallets
 
 import (
 	"bytes"
-	"crypto/elliptic"
 	"encoding/gob"
 	"fmt"
 	"log"
@@ -10,7 +9,7 @@ import (
 )
 
 type Wallets struct {
-	Wallets map[string]*Wallet
+	Wallets map[string][]byte
 }
 
 //encrypts the content of the wallets and saves it in a .dat file format
@@ -18,7 +17,6 @@ func (ws Wallets) SaveToFile(){
 	var walletContent bytes.Buffer
 
 	//create a new encoder to encode the data
-	gob.Register(elliptic.P256())
 	encoder := gob.NewEncoder(&walletContent)
 
 	err := encoder.Encode(ws)
@@ -47,7 +45,6 @@ func (ws *Wallets) LoadFromFile() (error) {
 	}
 
 	var wallet Wallets
-	gob.Register(elliptic.P256())
 	decoder := gob.NewDecoder(bytes.NewReader(fileContent))
 	err = decoder.Decode(&wallet)
 
@@ -64,7 +61,7 @@ func (ws *Wallets) LoadFromFile() (error) {
 func WalletsList() (*Wallets, error) {
 	wallets := Wallets{}
 
-	wallets.Wallets= make(map[string]*Wallet)
+	wallets.Wallets= make(map[string][]byte)
 
 	err := wallets.LoadFromFile();
 
@@ -89,13 +86,22 @@ func (ws *Wallets) CreateWallet() string {
 	//load wallets stored content
 	address := fmt.Sprintf("%s", wallet.GetAddress())
 
+	//encode the wallet for storage
+	encWallet, err := wallet.GobEncode()
+	
+	if err != nil {
+		log.Panicf("Error while encoding wallet: %v", err)
+	}
+
 
 	//attaches the newly created wallet to the wallets collection 
-	ws.Wallets[address] = wallet
+	ws.Wallets[address] = encWallet 
 
 	return address
 }
 
 func (ws Wallets) GetWallet(address  string) Wallet {
-	return *ws.Wallets[address]
+	var wallet Wallet
+	wallet.GobDecode(ws.Wallets[address])
+	return wallet
 }
