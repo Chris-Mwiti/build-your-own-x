@@ -2,6 +2,7 @@ package wallets
 
 import (
 	"bytes"
+	"crypto/elliptic"
 	"encoding/gob"
 	"fmt"
 	"log"
@@ -17,6 +18,7 @@ func (ws Wallets) SaveToFile(){
 	var walletContent bytes.Buffer
 
 	//create a new encoder to encode the data
+	gob.Register(elliptic.P256())
 	encoder := gob.NewEncoder(&walletContent)
 
 	err := encoder.Encode(ws)
@@ -45,6 +47,7 @@ func (ws *Wallets) LoadFromFile() (error) {
 	}
 
 	var wallet Wallets
+	gob.Register(elliptic.P256())
 	decoder := gob.NewDecoder(bytes.NewReader(fileContent))
 	err = decoder.Decode(&wallet)
 
