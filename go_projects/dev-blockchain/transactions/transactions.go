@@ -11,6 +11,10 @@ import (
 	"github.com/Chris-Mwiti/build-your-own-x/go-projects/dev-blockchain/wallets"
 )
 
+const (
+    newWalletInitValue = 0
+)
+
 //bitcoin transactions do not store the following:
 //1. No accounts
 //2. No balances
@@ -90,6 +94,30 @@ func NewCoinbaseTX(to, data string) *Transaction {
     fmt.Printf("New transactions: %#v", tx.Vout)
 
     return &tx
+}
+
+//creating a new create chain transaction
+func NewChainTx(to, data string) *Transaction {
+    input := TxInput{
+        Txid: []byte{},
+        Vout: -1,
+        Signature: []byte(data),
+        PubKey: []byte{},
+    }
+    output := NewTxOutput(newWalletInitValue, to)        
+    tx := &Transaction{
+        ID: []byte{},
+        Vin: []TxInput{input}, 
+        Vout: []TxOutput{*output},
+    }
+
+    //set the tx Id
+    tx.SetID()
+
+    //print out the newly created chain address
+    fmt.Printf("Transaction: %s\n",tx.String())
+
+    return tx
 }
 
 

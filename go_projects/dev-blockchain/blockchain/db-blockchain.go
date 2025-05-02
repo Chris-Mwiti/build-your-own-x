@@ -131,6 +131,43 @@ func CreateBlockchain(address string) *Blockchain {
 	return &bc
 }
 
+func (bc *Blockchain) CreateChain(address string){
+	
+	defer bc.Db.Close()
+
+	err := bc.Db.Update(func (tx *bolt.Tx) error {
+		bucket := tx.Bucket([]byte(blocksBucket))
+		
+		prevHash := bucket.Get([]byte("l"))
+
+		newTx := transactions.NewChainTx(address, transactions.GenesisCoinbaseData)
+		
+		block := NewBlock([]*transactions.Transaction{newTx},prevHash) 
+
+		err:= bucket.Put(block.Hash, block.Serialze())
+		
+		if err != nil {
+			return err
+		}
+
+		err = bucket.Put([]byte("l"), block.Hash)
+
+		if err != nil {
+			return err
+		}
+
+		//update the tip of the chain
+		bc.Tip = block.Hash
+
+		return nil
+	})	
+
+	if err != nil {
+		log.Panicf("Error while creating chain: %v", err)
+	}
+
+}
+
 //Add a new block to the chain
 func (bc *Blockchain) MineBlock(transactions []*transactions.Transaction){
 	//get the last block added in the chain

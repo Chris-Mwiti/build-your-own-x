@@ -163,8 +163,7 @@ func (cli *Cli) printChain() {
 
 //creates a new chain
 func (cli *Cli) createChain(address string){ 
-	chain := blockchain.CreateBlockchain(address)
-	defer chain.Db.Close()
+	cli.Bc.CreateChain(address)
 	fmt.Println("Completed creating the chain!")
 }
 
