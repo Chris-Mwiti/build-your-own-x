@@ -131,18 +131,31 @@ func CreateBlockchain(address string) *Blockchain {
 	return &bc
 }
 
-func (bc *Blockchain) CreateChain(address string){
-	
-	defer bc.Db.Close()
+func CreateChain(address string) *Blockchain{
+	if !dbExists() {
+		bc := CreateBlockchain(address)
+		return bc
+	}
+	//set the Tip pointer of the current block
+	var tip []byte
+	db,err := bolt.Open(dbFile, 0600, nil)
 
-	err := bc.Db.Update(func (tx *bolt.Tx) error {
+	if err != nil {
+		log.Panic(err)
+	}
+
+
+
+	defer db.Close()
+
+	err = db.Update(func (tx *bolt.Tx) error {
 		bucket := tx.Bucket([]byte(blocksBucket))
 		
-		prevHash := bucket.Get([]byte("l"))
+		tip = bucket.Get([]byte("l"))
 
 		newTx := transactions.NewChainTx(address, transactions.GenesisCoinbaseData)
 		
-		block := NewBlock([]*transactions.Transaction{newTx},prevHash) 
+		block := NewBlock([]*transactions.Transaction{newTx},tip) 
 
 		err:= bucket.Put(block.Hash, block.Serialze())
 		
@@ -157,13 +170,17 @@ func (bc *Blockchain) CreateChain(address string){
 		}
 
 		//update the tip of the chain
-		bc.Tip = block.Hash
-
+		tip = block.Hash
 		return nil
 	})	
 
 	if err != nil {
 		log.Panicf("Error while creating chain: %v", err)
+	}
+
+	return &Blockchain{
+		Tip: tip,
+		Db: db,
 	}
 
 }
