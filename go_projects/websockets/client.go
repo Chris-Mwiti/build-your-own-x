@@ -1,109 +1,85 @@
 package websockets
 
 import (
-	"bufio"
-	"crypto/tls"
-	"io"
-	"net"
-	"net/http"
-	"net/url"
-	"sync"
+	"bytes"
+	"log"
+	"time"
+
+	"github.com/gorilla/websocket"
 )
 
-//represents the configuration protocol for a websocket connection
-type Config struct {
-	//websocket server address
-	Location *url.URL
-	//websocket client origin
-	Origin *url.URL
-	//websocket subprotocols
-	Protocol []string
-	//websocket protocol version
-	Version int
-	//TLS config for secure websocket(wss)
-	TlsConfig *tls.Config
-	//additional header fiels to be sent in websocket opening handshake
-	Header http.Header
-	//Dialer used when opening websocket connection
-	Dialer *net.Dialer
+const (
+	//time allowed to write a message to a peer
+	writeWait = 10 * time.Second
 
-	handshakeData map[string]string
+	//time allowed to read the next pong message from the peer
+	pongWait = 60 * time.Second
+
+	//send pings to peer with this period. Must be less than pongWait
+	pingPeriod = (pongWait * 9) / 10
+
+	//maximum message size allowed from peer
+	maxMessageSize = 512
+)
+
+var (
+	newLine = []byte{'\n'}
+	space = []byte{' '}
+)
+
+var upgrader = websocket.Upgrader {
+	ReadBufferSize: 1024,
+	WriteBufferSize: 1024,
+}
+
+//Client is a middleman between the websocket connection and the hub
+type Client struct {
+	hub *Hub
+
+	//the websocket connection
+	conn *websocket.Conn
+
+	//Buffered channel of outbound messages.
+	send chan []byte
 
 }
 
-type Conn struct {
-	config *Config
-	request *http.Request
+//readPump pumps messages from the websocket connection to the hub
+//application runs readPump in a per connection goroutine. Ensures that there is at most one reader on a connection 
+func (client *Client) readPump() {
+	defer func(){
+		client.hub.unregister <- client
+		client.conn.Close()
+	}()
 
-	buf *bufio.ReadWriter
-	rwc *io.ReadWriteCloser
+	//sets the readmessage limit for that specific connection
+	client.conn.SetReadLimit(maxMessageSize)
 
-	rio sync.Mutex
-	frameReaderFactory
+	//set the deadline for waiting for a read operation
+	//once the deadline is met anything that comes after is corrupt & will result to an error
+	client.conn.SetReadDeadline(time.Now().Add(pongWait))
+	//sets the write deadline for the write operation
+	//once the deadline is met anything that comes after is corrupt & will result to an error
+	client.conn.SetWriteDeadline(time.Now().Add(writeWait))
 
-	wio sync.Mutex
-	frameWriterFactory
+	//provides a callback func with the pong data. 
+	//in this case we are setting a deadline for the read operation once the readMessage or the nextreader func is triggerd
+	client.conn.SetPongHandler(func(appData string) error {client.conn.SetReadDeadline(time.Now().Add(pongWait)); return nil})
 
-	frameHandler
-	PayloadType byte
-	defaultCloseStatus int
-
-	//limits the size of frame payload received over conn
-	MaxPayloadBytes int
-}
-
-//serverHandshaker is an interface to handle websocket server side handshake
-type serverHandshaker interface {
-	// ReadHandshake reads handshake request message from client
-	// Return http repsonse code and error if any
-	ReadHandshake(buf *bufio.Reader, req *http.Request) (code int, err error)
-
-	//AcceptHandshake accepts the client handshake request and sends
-	//handshake response back to the client
-	AcceptHandshake(buf *bufio.Writer)(err error)
-
-	//NewServerConn creates a new Websocket connection
-	NewServerConn(buf *bufio.ReadWriter, rwc io.ReadWriteCloser, request *http.Request) (conn *Conn)
-}
-
-//framereader is an interface to read a websocket frame
-type frameReader interface {
-	//Reader is to read payload of the frame
-	io.Reader
-
-	//PayloadType returns payload type
-	PayloadType()byte
-
-	//HeaderReader returns a reader to read header of the frame
-	HeaderReader() io.Reader
-
-	//TrailerReader returns a reader to read trailer of the frame.
-	//If it return nil, there is no trailer in the frame
-	TrailerReader() io.Reader
-
-
-	//returns the total length of the frame
-	Len() int
-}
-
-type frameReaderFactory interface {
-	NewFrameReader() (r frameReader, err error)
-}
-
-type frameWriter interface {
-	io.WriteCloser
-}
-
-type frameWriterFactory interface {
-	NewFrameWriter(payloadType byte) (W frameWriter, err error)
-}
-
-type frameHandler interface {
-	HandleFrame(frame frameReader) (r frameReader, err error)
-	WriteClose(status int)(err error)
-}
-
-//DialError -> an error that occurs while dialling a websocket server
-type DialError struct {
-	*Config
+	for {
+		//used to get the nextReader and from that initiate from that reader
+		//and store the message in a buffer
+		_, message, err := client.conn.ReadMessage()
+		if err != nil {
+			//checks if the websocket err is not among the listed websocket err coded
+			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure){
+				log.Printf("error: %v", err)
+			}
+			break
+		}
+		//replaces the entire message with spaces instead of newlines
+		message = bytes.TrimSpace(bytes.Replace(message, newLine, space, -1))
+		//broadcast the entire message to the hub
+		client.hub.broadcast <- message
+	}
 }
