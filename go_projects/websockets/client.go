@@ -3,6 +3,7 @@ package websockets
 import (
 	"bytes"
 	"log"
+	"net/http"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -131,4 +132,25 @@ func (client *Client) writePump() {
 			}
 		}
 	}
+}
+
+//serverWs handles websocket request from the peer
+func serveWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
+	conn, err := upgrader.Upgrade(w, r, nil)
+
+	if err != nil {
+		log.Printf("error while upgrading the connection: %v", err)
+		return
+	}
+
+	client := &Client{
+		hub: hub,
+		conn: conn,
+		send: make(chan []byte, 256),
+	}
+
+	client.hub.register <- client
+
+	go client.writePump()
+	go client.readPump()
 }
