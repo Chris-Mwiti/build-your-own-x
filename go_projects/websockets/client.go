@@ -83,3 +83,52 @@ func (client *Client) readPump() {
 		client.hub.broadcast <- message
 	}
 }
+
+//write pump messages from the hub to the websocket connection
+func (client *Client) writePump() {
+	//create a new ticker that will automatically send messages
+	//to the websocket connection in a interval
+	ticker := time.NewTicker(pingPeriod)
+
+	defer func() {
+		ticker.Stop()
+		client.conn.Close()
+	}()
+
+	for {
+		select {
+		case message, ok := <- client.send:
+			client.conn.SetWriteDeadline(time.Now().Add(writeWait))
+			if !ok {
+				//if the channel is closed send a message to notify the peer the conn is closed
+				client.conn.WriteMessage(websocket.CloseMessage, []byte("Hub closed the send channel"))
+				return
+			}
+
+			w, err := client.conn.NextWriter(websocket.TextMessage)
+			if err != nil {
+				log.Printf("error while initializing next writer\n")
+				return
+			}
+			_, err = w.Write(message)
+
+			if err != nil {
+				log.Printf("error while writing message\n")
+				return
+			}
+
+			//add queued chat messsages to the current websocket message
+			mesLen := len(client.send)
+			for i := 0; i < mesLen; i++ {
+				w.Write(newLine)
+				w.Write(<-client.send)
+			}
+
+		case <-ticker.C:
+			client.conn.SetWriteDeadline(time.Now().Add(writeWait))
+			if err := client.conn.WriteMessage(websocket.PingMessage, []byte("ping!!")); err != nil{
+				return
+			}
+		}
+	}
+}
