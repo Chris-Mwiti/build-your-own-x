@@ -1,10 +1,11 @@
 package main
 
 import (
-	"fmt" 
-	"sort" 
+	"fmt"
+	"sort"
 	"time"
-	"gopkg.in/src-d/go-git.v4"	
+
+	"gopkg.in/src-d/go-git.v4"
 	"gopkg.in/src-d/go-git.v4/plumbing/object"
 )
 const outofRange = 99999
@@ -108,6 +109,8 @@ func fillCommits(email string, path string, commits map[int]int) map[int]int {
 	err = iterator.ForEach(func(c *object.Commit) error {
 		daysAgo := countDaysSinceDate(c.Author.When) + offset
 
+	  //acts like an authenfication check.
+		//@todo: extract this feature to a more robust function 
 		if c.Author.Email != email {
 			return nil
 		}
@@ -269,6 +272,7 @@ func printCells(cols map[int]column) {
 		}
 		fmt.Printf("\n")
 	}
+
 }
 
 func stats(email string) {
