@@ -78,8 +78,6 @@ func (client *Client) readPump() {
 			}
 			break
 		}
-		//replaces the entire message with spaces instead of newlines
-		message = bytes.TrimSpace(bytes.Replace(message, newLine, space, -1))
 		//broadcast the entire message to the hub
 		client.hub.broadcast <- message
 	}
