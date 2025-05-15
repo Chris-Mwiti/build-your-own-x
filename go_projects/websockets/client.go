@@ -1,7 +1,6 @@
 package websockets
 
 import (
-	"bytes"
 	"log"
 	"net/http"
 	"time"
