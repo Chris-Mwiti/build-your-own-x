@@ -100,9 +100,11 @@ func NewConn(room string, w http.ResponseWriter, r *http.Request) (*ClientConn, 
 		WriteBufferSize: 1024,
 	}
 
+	log.Println("establishing a new connection...")
 	conn, err := upgrader.Upgrade(w, r, r.Header)
 
 	if err != nil {
+		log.Println("error has occured while establishing connection")
 		return nil, errors.Join(errors.New("error while establishing connection"), err)
 	}
 	
@@ -113,39 +115,61 @@ func NewConn(room string, w http.ResponseWriter, r *http.Request) (*ClientConn, 
 		status: Online,
 		send: make(chan *Message),
 	}
+
+	log.Println("connection succesfull established. Have a nice chat!")
 	return roomConn, nil
 }
 
-func (client *ClientConn) AttachToRoom(rn string){
+func (client *ClientConn) AttachToRoom(rn string) (*Room){
 	if _,ok := client.Rooms[rn]; !ok{
+		log.Println("room does not exist...creating one")
 		//now one can create the room 
 		nr := NewRoom(rn)
-		nr.conn[client] = client.status
+		//register to the room
+		log.Println("registering the client to the roo")
+		nr.register <- client
 
 		client.appendRoom(nr)
 		client.setActiveRoom(nr)
 
-		return
+		return nil
 	}
 	
 	room := client.Rooms[rn]
+	log.Println("registering the client to the roo")
+	room.register <- client
 	client.setActiveRoom(room)
+
+	return room
+}
+
+func (client *ClientConn) DetachToRoom(rn string){
+	if _,ok := client.Rooms[rn]; !ok{
+		log.Println("room does not exit")
+		return
+	}
+
+	room := client.Rooms[rn]	
+	room.unregister <- client
 }
 
 func (client *ClientConn) appendRoom(room *Room){
+	log.Println("appending room to the existing client rooms.")
 	client.Rooms[room.Id] = room
 }
 
 func (client *ClientConn) setActiveRoom(room *Room){
+	log.Println("setting the client active room.")
 	client.activeRoom = room
 }
 
 func(client *ClientConn) ReadMessage(){
 	//set the defaults such as pingtimeouts, ponttimeouts, and close methods
 	defer func(){
+		log.Println("closing the client connection")
 		err := client.Conn.Close()
 		if err != nil {
-			log.Printf("error while closing the client connection")
+			log.Panicf("error while closing the client connection: %v", err)
 		}
 	}()
 	client.Conn.SetReadLimit(readLimit)
@@ -157,13 +181,14 @@ func(client *ClientConn) ReadMessage(){
 
 		if err != nil{
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseAbnormalClosure, websocket.CloseGoingAway) {
-				log.Printf("error while read websocket: %v", err)
+				log.Printf("unexpected error while read websocket: %v", err)
 			}
 			break
 		}
 
 		//construct the messageSendOb
 		newMsg := newChanMessage(client,message)
+		log.Println("broadcasting room message")
 		client.activeRoom.broadcast <- newMsg 
 	}
 }
@@ -177,6 +202,8 @@ func (client *ClientConn) WriteMessage(){
 	for message := range client.send {
 		writer, err := client.Conn.NextWriter(websocket.TextMessage)			
 
+		defer writer.Close()
+
 		if err != nil{
 			//check if the error is an unexpected error
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseAbnormalClosure, websocket.CloseGoingAway) {
@@ -187,6 +214,8 @@ func (client *ClientConn) WriteMessage(){
 
 		_,err = writer.Write(message.data)
 		if err != nil {
+			log.Println("closing the write connection")
+			writer.Close()
 			log.Panicf("error while writing to the connection: %v", err)
 		}
 
@@ -195,6 +224,8 @@ func (client *ClientConn) WriteMessage(){
 			message := <-client.send
 			_,err = writer.Write(message.data)
 			if err != nil {
+				log.Println("closing the write connection")
+				writer.Close()
 				log.Panicf("error while writing to the connections: %v",err)
 			}
 		}
@@ -234,11 +265,12 @@ func (room *Room) Listen(){
 				//send the message to each of the clients
 				client.send <- rcvMessage.message
 			}
+
+		//store the newly created user and update the status
 		case client,ok := <-room.register:
 		if !ok {
 		 log.Println("error while registering new client")	
 		}
-		//store the newly created user and update the status
 		room.conn[client] = Online
 
 	  //unregister event listener
@@ -250,7 +282,6 @@ func (room *Room) Listen(){
 		delete(room.conn, client)
 
 	}
-
 	}
 }
 
