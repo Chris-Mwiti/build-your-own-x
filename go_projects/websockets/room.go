@@ -1,0 +1,103 @@
+package main
+
+import (
+	"time"
+	"log"
+	"github.com/google/uuid"
+)
+
+//@todo: implement the following methods
+//1. Creation of a new room
+//2. Reconnection of a connection from a client connection
+//3. Deleting an existing connection
+//4. Termination of a room instance
+//5. Display the status of the user
+
+//...[Model Instance]...
+//1. Connect the room to a database [Creation of a new room, Update the status of a room,
+// termination of room instance, reconnection with a room]
+//2. Integration with a pub sub model. This allows when a client send data to a conn, the end 
+//user can be notified on the message sent
+//3. Ability to create private chatting rooms which are encrypted. 
+//4. Ability to create communities with a limit on the number of users
+
+type Room struct {
+	Id string
+	Name string
+	conn map[*ClientConn]status
+	messages *MessageHub
+	broadcast chan *messageChannel
+	register chan *ClientConn
+	unregister chan *ClientConn
+}
+
+//receives the room name as parameter
+//used to create a new room of client conn
+func NewRoom(rn string) *Room{ 
+	id := uuid.NewString();
+	room := &Room{
+		Id: id,
+		Name: rn,
+		conn: make(map[*ClientConn]status),	
+		messages: new(MessageHub),
+		broadcast: make(chan *messageChannel),
+	} 
+	return room
+}
+
+//always listens for incoming messages
+func (room *Room) Listen(){
+	defer func(){
+		close(room.broadcast)
+		close(room.register)
+		close(room.unregister)
+	}()
+	for {
+		select{
+			case rcvMessage, ok:= <-room.broadcast:
+
+			//automatically switch the status of the sender on close 
+			defer func(){
+				room.conn[rcvMessage.sender] = Online
+			}()
+			if !ok {
+				log.Println("error while receiving message")
+				continue
+			}
+			//update the status of the broadcaster
+			room.conn[rcvMessage.sender] = Typing
+
+			//broadcast to the room users someone is typing
+			for client,_:= range room.conn{
+				err := client.Conn.SetWriteDeadline(time.Now().Add(writeDeadline))
+				if err != nil {
+					log.Panicf("error while setting write deadline: %v", err)
+				}
+				//send the message to each of the clients
+				client.send <- rcvMessage.message
+			}
+
+		//store the newly created user and update the status
+		case client,ok := <-room.register:
+		if !ok {
+		 log.Println("error while registering new client")	
+		 continue
+		}
+		room.conn[client] = Online
+
+	  //unregister event listener
+		case client, ok := <-room.unregister:
+		if !ok {
+			log.Println("error while unregistering client")
+			continue
+		}
+		close(client.send)
+		delete(room.conn, client)
+
+	}
+	}
+}
+
+
+
+

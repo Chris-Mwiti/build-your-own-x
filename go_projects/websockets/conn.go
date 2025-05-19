@@ -1,14 +1,19 @@
-package websockets
+package main
 
 import (
-	"errors"
+	"context"
+	"fmt"
 	"log"
 	"net/http"
+	"net/url"
 	"time"
+
 	uuid "github.com/google/uuid"
+
 	"github.com/gorilla/websocket"
 )
 
+//keeps track of the clients status
 type status string
 
 const (
@@ -24,48 +29,11 @@ const (
 	setPingWait = setPongWait / 4
 	readLimit = 256
 )
-
-//@todo: implement the following methods
-//1. Creation of a new room
-//2. Reconnection of a connection
-//3. Deleting a new connection
-//2. Updating the status of client conn
-type Room struct {
-	Id string
-	Name string
-	conn map[*ClientConn]status
-	messages *MessageHub
-	broadcast chan *messageChannel
-	register chan*ClientConn
-	unregister chan*ClientConn
-}
-
-//@todo: implement the following methods
-//1. Create a new Message
-type Message struct {
-	Id string
-	timestamp time.Time
-	data []byte
-}
-
-type messageChannel struct {
-	sender *ClientConn
-	message *Message
-}
-
-
-//@todo: implement the following methods
-//1. Find a Message.
-//2. Delete a Message
-//3. Update a meesage
-type MessageHub struct {
-	hub map[*ClientConn][]*Message
-}
-
-//@todo: implement the following methods
-//1. Create a new conn
-//2. Attach a conn to a room
-//2. Send data over a connection stream
+//@todo:
+//1. Implement the client connections to be registered in a database(mongoDb)
+//2. Ability for the server to implement a server reconnection when needed
+//3. Rename the send channel to receive coz why not
+//4. 
 type ClientConn struct {
 	Id string
 	Rooms map[string]*Room //will keep track of the engage rooms by the connection 
@@ -75,43 +43,51 @@ type ClientConn struct {
 	send chan *Message
 }
 
-//receives the room name as parameter
-//used to create a new room of client conn
-func NewRoom(rn string) *Room{ 
-	id := uuid.NewString();
-	room := &Room{
-		Id: id,
-		Name: rn,
-		conn: make(map[*ClientConn]status),	
-		messages: new(MessageHub),
-		broadcast: make(chan *messageChannel),
-	} 
-	return room
+func establishConnection(url *url.URL) (*websocket.Conn,*context.Context, error){
+	//create a connection string
+	s := url.String()
+
+	//create a new context that will be will timeoutes and cancellation
+	connCtx, cancel := context.WithTimeout(context.Background(), time.Second * 10)
+
+	//connection dialer
+	dialer := websocket.Dialer{
+		WriteBufferSize: 1024,
+		ReadBufferSize: 1024,
+	}
+	conn,res,err := dialer.DialContext(connCtx, s, nil)
+
+	if err != nil {
+		cancel()
+		return nil, nil, err
+	}
+
+	log.Printf("connection established succesfully: status code: %s", res.Status)
+
+	return conn, &connCtx, nil	
 }
-
-
 
 func NewConn(room string, w http.ResponseWriter, r *http.Request) (*ClientConn, error){
 	id := uuid.NewString()
-	//@todo: Implent a cli gui form and option selector available rooms
-	//upgrade the current http conn to a websocket conn
-	upgrader := websocket.Upgrader{
-		ReadBufferSize: 1024,
-		WriteBufferSize: 1024,
-	}
 
 	log.Println("establishing a new connection...")
-	conn, err := upgrader.Upgrade(w, r, r.Header)
+	url := &url.URL{
+		Scheme: "ws",
+		Host: "localhost:8080",
+		Path: "/ws",
+	}
+	conn,_, err := establishConnection(url)
 
 	if err != nil {
 		log.Println("error has occured while establishing connection")
-		return nil, errors.Join(errors.New("error while establishing connection"), err)
+		return nil, fmt.Errorf("error while establishing conn: %v",err)
 	}
 	
 
 	roomConn := &ClientConn{
 		Id: id,
 		Conn: conn,
+		Rooms: make(map[string]*Room),
 		status: Online,
 		send: make(chan *Message),
 	}
@@ -126,18 +102,20 @@ func (client *ClientConn) AttachToRoom(rn string) (*Room){
 		//now one can create the room 
 		nr := NewRoom(rn)
 		//register to the room
-		log.Println("registering the client to the roo")
-		nr.register <- client
+		log.Println("registering the client to the room")
+		nr.conn[client] = client.status
 
 		client.appendRoom(nr)
 		client.setActiveRoom(nr)
 
-		return nil
+		return nr
 	}
 	
 	room := client.Rooms[rn]
 	log.Println("registering the client to the roo")
-	room.register <- client
+	room.conn[client] = Online
+
+	log.Println("setting current room active")
 	client.setActiveRoom(room)
 
 	return room
@@ -151,6 +129,7 @@ func (client *ClientConn) DetachToRoom(rn string){
 
 	room := client.Rooms[rn]	
 	room.unregister <- client
+	client.activeRoom = nil
 }
 
 func (client *ClientConn) appendRoom(room *Room){
@@ -173,7 +152,7 @@ func(client *ClientConn) ReadMessage(){
 		}
 	}()
 	client.Conn.SetReadLimit(readLimit)
-	client.Conn.SetPongHandler(func(appData string) error {client.Conn.SetReadDeadline(time.Now().Add(pongWait)); return nil})
+	client.Conn.SetPongHandler(func(appData string) error {client.Conn.SetReadDeadline(time.Now().Add(setPingWait)); return nil})
 
 	//always read for a message
 	for{
@@ -189,12 +168,13 @@ func(client *ClientConn) ReadMessage(){
 		//construct the messageSendOb
 		newMsg := newChanMessage(client,message)
 		log.Println("broadcasting room message")
+		client.activeRoom.messages.appendMessage(client, message)
 		client.activeRoom.broadcast <- newMsg 
 	}
 }
 
 func (client *ClientConn) WriteMessage(){
-	if _,ok :=<-client.send; ok{
+	if _,ok :=<-client.send; !ok{
 	  log.Panicf("client send channel has been closed")
 	}
 	client.Conn.SetWriteDeadline(time.Now().Add(writeDeadline))
@@ -220,7 +200,7 @@ func (client *ClientConn) WriteMessage(){
 		}
 
 		//send the queued data
-		for i := len(client.send); i <= 0; i--{
+		for i := len(client.send); i >= 0; i--{
 			message := <-client.send
 			_,err = writer.Write(message.data)
 			if err != nil {
@@ -231,59 +211,5 @@ func (client *ClientConn) WriteMessage(){
 		}
 	}
 }
-
-func newChanMessage(client *ClientConn, message []byte) *messageChannel{
-	id := uuid.NewString() 
-	return &messageChannel{
-		sender: client,
-		message: &Message{
-			Id: id,
-			timestamp: time.Now(),
-			data: message,	
-		},
-	}
-}
-
-
-//always listens for incoming messages
-func (room *Room) Listen(){
-	for {
-		select{
-			case rcvMessage, ok:= <-room.broadcast:
-			if !ok {
-				log.Println("error while receiving message")
-			}
-			//update the status of the broadcaster
-			room.conn[rcvMessage.sender] = Typing
-
-			//broadcast to the room users someone is typing
-			for client,_:= range room.conn{
-				err := client.Conn.SetWriteDeadline(time.Now().Add(writeDeadline))
-				if err != nil {
-					log.Panicf("error while setting write deadline: %v", err)
-				}
-				//send the message to each of the clients
-				client.send <- rcvMessage.message
-			}
-
-		//store the newly created user and update the status
-		case client,ok := <-room.register:
-		if !ok {
-		 log.Println("error while registering new client")	
-		}
-		room.conn[client] = Online
-
-	  //unregister event listener
-		case client, ok := <-room.unregister:
-		if !ok {
-				log.Println("error while unregistering client")
-		}
-		close(client.send)
-		delete(room.conn, client)
-
-	}
-	}
-}
-
 
 
