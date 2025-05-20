@@ -29,6 +29,7 @@ type MessageHub struct {
 }
 
 func (msgHub *MessageHub) appendMessage(conn *Conn, msg []byte){
+	log.Println("appending message to the hub")
 	id := uuid.New().String()
 	msgHub.hub[conn] = append(msgHub.hub[conn], &Message{
 		Id: id,	

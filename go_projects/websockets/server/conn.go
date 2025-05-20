@@ -129,7 +129,6 @@ func(client *Conn) ReadMessage(){
 
 		//construct the messageSendOb
 		newMsg := newChanMessage(client,message)
-		log.Println("broadcasting room message")
 		client.activeRoom.messages.appendMessage(client, message)
 		client.activeRoom.broadcast <- newMsg 
 	}
@@ -137,41 +136,35 @@ func(client *Conn) ReadMessage(){
 
 func (client *Conn) WriteMessage(){
 	if _,ok :=<-client.send; !ok{
-	  log.Panicf("client send channel has been closed")
+		log.Println("client send channel has been closed")
 	}
 	client.Conn.SetWriteDeadline(time.Now().Add(writeDeadline))
 
 	for message := range client.send {
+
+		log.Println("sending message to client")
 		writer, err := client.Conn.NextWriter(websocket.TextMessage)			
 
-		defer writer.Close()
 
 		if err != nil{
 			//check if the error is an unexpected error
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseAbnormalClosure, websocket.CloseGoingAway) {
-				log.Panicf("error while writing message: %v", err)
+				log.Printf("unexpeceted error while writing to the connection: %v", err)
+				break
 			}
 			break
 		}
 
 		_,err = writer.Write(message.data)
-		if err != nil {
-			log.Println("closing the write connection")
-			writer.Close()
-			log.Panicf("error while writing to the connection: %v", err)
-		}
 
-		//send the queued data
-		for i := len(client.send); i >= 0; i--{
-			message := <-client.send
-			_,err = writer.Write(message.data)
-			if err != nil {
-				log.Println("closing the write connection")
-				writer.Close()
-				log.Panicf("error while writing to the connections: %v",err)
-			}
+		if err != nil {
+			if websocket.IsUnexpectedCloseError(err, websocket.CloseAbnormalClosure, websocket.CloseGoingAway){
+				log.Printf("unexpected error while writing to the connection: %v", err)
+				break
+			}	
+			break
 		}
 	}
-}
 
+}
 

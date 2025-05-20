@@ -16,13 +16,6 @@ func serverWs(w http.ResponseWriter, r *http.Request){
 		ReadBufferSize: 1024,
 	}
 
-	log.Println("Printing...the headers of the request")
-
-	log.Println(r.Header.Get("Sec-Websocket-Extension"))
-	log.Println(r.Header.Get("Sec-Websocket-Protocol"))
-	log.Println(r.Header.Get("Sec-Websocket-Accept"))
-	log.Println(r.Header.Get("Sec-Websocket-Key"))
-	log.Println(r.Header.Get("Sec-Websocket-Version"))
 
 	conn, err := upgrader.Upgrade(w,r,nil)
 
