@@ -1,4 +1,4 @@
-package main
+package server
 
 import (
 	"time"
@@ -15,7 +15,7 @@ type Message struct {
 }
 
 type messageChannel struct {
-	sender *ClientConn
+	sender *Conn
 	message *Message
 }
 
@@ -25,10 +25,10 @@ type messageChannel struct {
 //2. Delete a Message
 //3. Update a meesage
 type MessageHub struct {
-	hub map[*ClientConn][]*Message
+	hub map[*Conn][]*Message
 }
 
-func (msgHub *MessageHub) appendMessage(conn *ClientConn, msg []byte){
+func (msgHub *MessageHub) appendMessage(conn *Conn, msg []byte){
 	id := uuid.New().String()
 	msgHub.hub[conn] = append(msgHub.hub[conn], &Message{
 		Id: id,	
@@ -37,7 +37,7 @@ func (msgHub *MessageHub) appendMessage(conn *ClientConn, msg []byte){
 	})
 }
 
-func (msgHub *MessageHub) findMessages(conn *ClientConn)([]*Message){
+func (msgHub *MessageHub) findMessages(conn *Conn)([]*Message){
 	messages, ok := msgHub.hub[conn]	
 
 	if !ok {
@@ -48,7 +48,7 @@ func (msgHub *MessageHub) findMessages(conn *ClientConn)([]*Message){
 	return messages
 }
 
-func newChanMessage(client *ClientConn, message []byte) *messageChannel{
+func newChanMessage(client *Conn, message []byte) *messageChannel{
 	id := uuid.NewString() 
 	return &messageChannel{
 		sender: client,

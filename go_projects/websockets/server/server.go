@@ -2,13 +2,46 @@ package server
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"net"
 	"net/http"
 	"time"
 	"github.com/gorilla/websocket"
 )
+
+
+func serverWs(w http.ResponseWriter, r *http.Request){
+	upgrader := websocket.Upgrader{
+		WriteBufferSize: 1024,
+		ReadBufferSize: 1024,
+	}
+
+	log.Println("Printing...the headers of the request")
+
+	log.Println(r.Header.Get("Sec-Websocket-Extension"))
+	log.Println(r.Header.Get("Sec-Websocket-Protocol"))
+	log.Println(r.Header.Get("Sec-Websocket-Accept"))
+	log.Println(r.Header.Get("Sec-Websocket-Key"))
+	log.Println(r.Header.Get("Sec-Websocket-Version"))
+
+	conn, err := upgrader.Upgrade(w,r,nil)
+
+	if err != nil {
+		log.Fatalf("could not be able to establish connection: %v", err)
+	}
+
+	//create a new client connection
+	newConn := NewConn(conn) 
+	rn := "text_room"
+
+	//here we have to simulate an input space where the user is allowed to enter the room name
+	room := newConn.AttachToRoom(rn)
+
+	//create new go routines to receive and write data
+	go room.Listen()
+	go newConn.ReadMessage()
+	go newConn.WriteMessage()
+}
 
 func RunServer(){
 	//create a new mux handler
@@ -17,38 +50,11 @@ func RunServer(){
 	baseCtx, cancel := context.WithTimeout(context.Background(), 10 * time.Second)
 	defer cancel()
 
-	upgrader := &websocket.Upgrader{
-		WriteBufferSize: 1024,
-		ReadBufferSize: 1024,
-	}
+	//handlers for the connection
 
-	muxHandler.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request){
-		//upgrade the connection	
-		conn, err := upgrader.Upgrade(w,r,r.Header)
-		if err != nil {
-			log.Panicf("error while upgrading connection: %v", err)
-		}
+	muxHandler.HandleFunc("/ws", serverWs)
 
-		for {
-			msgType, msg, err := conn.ReadMessage()
-
-			if err != nil {
-				log.Println("error while reading in the connection")
-				break
-			}
-
-			//write the received message
-			w, err := conn.NextWriter(msgType)
-			if err != nil {
-				log.Fatalf("error while writing to connection: %v", err)
-			}
-
-			fmtMsg := fmt.Sprintf("received the following message: %s",string(msg))
-			w.Write([]byte(fmtMsg))
-		}
-
-	})
-
+	
 	//create a new server and run it up
 	server := http.Server{
 		Addr: "localhost:8080",	

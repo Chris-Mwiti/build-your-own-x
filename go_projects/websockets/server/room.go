@@ -1,4 +1,4 @@
-package main
+package server
 
 import (
 	"time"
@@ -24,11 +24,11 @@ import (
 type Room struct {
 	Id string
 	Name string
-	conn map[*ClientConn]status
+	conn map[*Conn]status
 	messages *MessageHub
 	broadcast chan *messageChannel
-	register chan *ClientConn
-	unregister chan *ClientConn
+	register chan *Conn
+	unregister chan *Conn
 }
 
 //receives the room name as parameter
@@ -38,7 +38,7 @@ func NewRoom(rn string) *Room{
 	room := &Room{
 		Id: id,
 		Name: rn,
-		conn: make(map[*ClientConn]status),	
+		conn: make(map[*Conn]status),	
 		messages: new(MessageHub),
 		broadcast: make(chan *messageChannel),
 	} 

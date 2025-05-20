@@ -1,17 +1,13 @@
 /*
 Copyright © 2025 NAME HERE <EMAIL ADDRESS>
-
 */
 package cmd
 
 import (
 	"os"
-
-	"github.com/spf13/cobra"
 	"github.com/Chris-Mwiti/build-your-own-x/go_projects/websockets/server"
+	"github.com/spf13/cobra"
 )
-
-
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -23,6 +19,7 @@ var rootCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		server.RunServer()	
 	},
+	
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
