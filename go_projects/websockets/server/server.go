@@ -51,7 +51,6 @@ func RunServer(){
 	defer cancel()
 
 	//handlers for the connection
-
 	muxHandler.HandleFunc("/ws", serverWs)
 
 	
@@ -70,6 +69,7 @@ func RunServer(){
 	if err != nil {
 		log.Fatalf("server shutdown: %v", err)
 	}
+	
 }
 
 

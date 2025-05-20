@@ -39,7 +39,9 @@ func NewRoom(rn string) *Room{
 		Id: id,
 		Name: rn,
 		conn: make(map[*Conn]status),	
-		messages: new(MessageHub),
+		messages: &MessageHub{
+			hub: make(map[*Conn][]*Message),
+		},
 		broadcast: make(chan *messageChannel),
 	} 
 	return room
