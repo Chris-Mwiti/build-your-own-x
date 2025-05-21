@@ -1,8 +1,10 @@
 package server
 
 import (
-	"time"
 	"log"
+	"time"
+
+	"github.com/boltdb/bolt"
 	"github.com/google/uuid"
 )
 
@@ -16,14 +18,15 @@ import (
 //...[Model Instance]...
 //1. Connect the room to a database [Creation of a new room, Update the status of a room,
 // termination of room instance, reconnection with a room]
-//2. Integration with a pub sub model. This allows when a client send data to a conn, the end 
+//2. Integration with a pub sub model. This allows when a client send data to a conn, the end
 //user can be notified on the message sent
-//3. Ability to create private chatting rooms which are encrypted. 
+//3. Ability to create private chatting rooms which are encrypted.
 //4. Ability to create communities with a limit on the number of users
 
 type Room struct {
 	Id string
 	Name string
+	Db *bolt.DB
 	conn map[*Conn]status
 	messages *MessageHub
 	broadcast chan *messageChannel
@@ -38,11 +41,14 @@ func NewRoom(rn string) *Room{
 	room := &Room{
 		Id: id,
 		Name: rn,
+		Db: nil,
 		conn: make(map[*Conn]status),	
 		messages: &MessageHub{
 			hub: make(map[*Conn][]*Message),
 		},
 		broadcast: make(chan *messageChannel),
+		register: make(chan *Conn),
+		unregister: make(chan *Conn),
 	} 
 	return room
 }

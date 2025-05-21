@@ -120,6 +120,25 @@ func (client *Conn) setActiveRoom(room *Room){
 	client.activeRoom = room
 }
 
+func (client *Conn) WriteOnceConn(msg []byte) (error) {
+	defer client.Conn.Close()
+	err := client.Conn.WriteMessage(websocket.TextMessage, msg)
+	return err
+}
+
+func (client *Conn) ReadOnceConn() ([]byte, error) {
+	defer client.Conn.Close()
+	var msg []byte
+	_, reader, err:= client.Conn.NextReader()
+	reader.Read(msg)
+
+	if err != nil{
+		return nil, err
+	}
+	
+	return msg, nil
+}
+
 func(client *Conn) ReadMessage(){
 	//set the defaults such as pingtimeouts, ponttimeouts, and close methods
 	defer func(){
@@ -151,6 +170,8 @@ func(client *Conn) ReadMessage(){
 }
 
 func (client *Conn) WriteMessage(){
+	defer client.Conn.Close()
+
 	if _,ok :=<-client.send; !ok{
 		log.Println("client send channel has been closed")
 	}
