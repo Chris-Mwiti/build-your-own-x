@@ -4,6 +4,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/boltdb/bolt"
 	uuid "github.com/google/uuid"
 
 	"github.com/gorilla/websocket"
@@ -36,6 +37,7 @@ type Conn struct {
 	activeRoom *Room //will keep track of which room the conn is currently active
 	status status
 	Conn *websocket.Conn
+	Db *bolt.DB
 	send chan *Message
 }
 
@@ -48,6 +50,7 @@ func NewConn(conn *websocket.Conn) (*Conn){
 		Id: id,
 		Rooms: make(map[string]*Room),
 		Conn: conn,
+		Db: nil,
 		activeRoom: nil,
 		status: Online,
 		send: make(chan *Message),
@@ -57,6 +60,19 @@ func NewConn(conn *websocket.Conn) (*Conn){
 	log.Println("connection succesfull established. Have a nice chat!")
 	return connection
 }
+
+func (client *Conn) ConnectDb(db *bolt.DB){
+	log.Println("connection to database")
+	client.Db = db
+}
+func (client *Conn) DisconnectDb(){
+	if client.Db != nil{
+		log.Println("disconnecting connection")
+		client.Db = nil
+	}
+	log.Println("connection already disconnected")
+}
+
 
 func (client *Conn) AttachToRoom(rn string) (*Room){
 	if _,ok := client.Rooms[rn]; !ok{
