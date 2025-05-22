@@ -6,6 +6,7 @@ import (
 
 	uuid "github.com/google/uuid"
 	"github.com/gorilla/websocket"
+	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
@@ -32,12 +33,20 @@ const (
 //4.
 type Conn struct {
 	Id string
+	//@todo swap this to a string slice of room ids
 	Rooms map[string]*Room //will keep track of the engage rooms by the connection 
 	activeRoom *Room //will keep track of which room the conn is currently active
 	status status
 	Conn *websocket.Conn
-	Db *mongo.Client
+	Db *mongo.Collection
 	send chan *Message
+}
+
+type ClientDto struct {
+	Id bson.ObjectID `bson:"_id"`
+	Rooms map[string]*Room `bson:"connected_room"`
+	ActiveRoom *Room `bson:"active_room"`
+	Status string `bson:"status"`
 }
 
 func NewConn(conn *websocket.Conn) (*Conn){
@@ -60,9 +69,9 @@ func NewConn(conn *websocket.Conn) (*Conn){
 	return connection
 }
 
-func (client *Conn) ConnectDb(db *mongo.Client){
+func (client *Conn) ConnectDb(db *mongo.Database){
 	log.Println("connection to database")
-	client.Db = db
+	client.Db = db.Collection("clients")
 }
 func (client *Conn) DisconnectDb(){
 	if client.Db != nil{
@@ -80,8 +89,7 @@ func (client *Conn) AttachToRoom(rn string) (*Room){
 		nr := NewRoom(rn)
 		//register to the room
 		log.Println("registering the client to the room")
-		nr.conn[client] = client.status
-
+		nr.conn[client.Id] = client
 		client.appendRoom(nr)
 		client.setActiveRoom(nr)
 
@@ -90,7 +98,7 @@ func (client *Conn) AttachToRoom(rn string) (*Room){
 	
 	room := client.Rooms[rn]
 	log.Println("registering the client to the roo")
-	room.conn[client] = Online
+	room.conn[client.Id] = client
 
 	log.Println("setting current room active")
 	client.setActiveRoom(room)
@@ -119,6 +127,10 @@ func (client *Conn) setActiveRoom(room *Room){
 	client.activeRoom = room
 }
 
+func (client *Conn) UpdateConnStatus(s status){
+	client.status = s
+}
+
 func (client *Conn) WriteOnceConn(msg []byte) (error) {
 	defer client.Conn.Close()
 	err := client.Conn.WriteMessage(websocket.TextMessage, msg)
@@ -136,6 +148,11 @@ func (client *Conn) ReadOnceConn() ([]byte, error) {
 	}
 	
 	return msg, nil
+}
+
+func (client *Conn) Serialize() (ClientDto){
+	dto := ClientDto{}
+	return dto
 }
 
 func(client *Conn) ReadMessage(){
@@ -203,4 +220,6 @@ func (client *Conn) WriteMessage(){
 	}
 
 }
+
+
 

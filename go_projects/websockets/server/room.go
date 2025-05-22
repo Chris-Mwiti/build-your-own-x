@@ -47,7 +47,7 @@ func NewRoom(rn string) *Room{
 		Id: id,
 		Name: rn,
 		db: nil,
-		conn: make(map[string]status),	
+		conn: make(map[string]*Conn),	
 		messages: &MessageHub{
 			hub: make(map[*Conn][]*Message),
 		},
@@ -85,21 +85,18 @@ func (room *Room) Listen(){
 	}()
 	for {
 		select{
-			case rcvMessage, ok:= <-room.broadcast:
+		case rcvMessage, ok:= <-room.broadcast:
 
-			//automatically switch the status of the sender on close 
-			defer func(){
-				room.conn[rcvMessage.sender.Id] = Online
-			}()
 			if !ok {
 				log.Println("error while receiving message")
 				continue
 			}
 			//update the status of the broadcaster
-			room.conn[rcvMessage.sender.Id] = Typing
+			rcvMessage.sender.UpdateConnStatus(Typing)
+			room.conn[rcvMessage.message.Id] = rcvMessage.sender
 
 			//broadcast to the room users someone is typing
-			for client,_:= range room.conn{
+			for _,client:= range room.conn{
 				err := client.Conn.SetWriteDeadline(time.Now().Add(writeDeadline))
 				if err != nil {
 					log.Panicf("error while setting write deadline: %v", err)
@@ -108,24 +105,26 @@ func (room *Room) Listen(){
 				client.send <- rcvMessage.message
 			}
 
+			rcvMessage.sender.UpdateConnStatus(Online)
+
 		//store the newly created user and update the status
 		case client,ok := <-room.register:
-		if !ok {
-		 log.Println("error while registering new client")	
-		 continue
-		}
-		room.conn[client] = Online
+			if !ok {
+				log.Println("error while registering new client")	
+				continue
+			}
+			client.UpdateConnStatus(Online)
 
-	  //unregister event listener
+		//unregister event listener
 		case client, ok := <-room.unregister:
-		if !ok {
-			log.Println("error while unregistering client")
-			continue
-		}
-		close(client.send)
-		delete(room.conn, client)
+			if !ok {
+				log.Println("error while unregistering client")
+				continue
+			}
+			close(client.send)
+			delete(room.conn, client.Id)
 
-	}
+		}
 	}
 }
 
