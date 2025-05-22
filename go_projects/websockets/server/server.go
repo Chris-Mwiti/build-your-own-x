@@ -58,7 +58,6 @@ func serverWs(db *mongo.Client, w http.ResponseWriter, r *http.Request) {
 func RunServer() {
 	//opening database file
 	db, err := serveDb()
-
 	//dont leave any connection hanging once server is shutdown
 	ctx := context.Background()
 	defer func(){
@@ -67,10 +66,12 @@ func RunServer() {
 			log.Fatalf("error while disconnecting to the database: %v", err)
 		}
 	}()
-
 	if err != nil {
 		log.Fatalf("error can not access the database: %v", err)
 	}
+	//setup the database to be used
+	appDb = db.Database("tchat-db")
+
 
 	//create a new mux handler
 	muxHandler := http.NewServeMux()

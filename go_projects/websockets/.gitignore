@@ -1,1 +1,3 @@
-./server/database/*
+./server/database/*.db
+./server/database/mongodb/*
+
