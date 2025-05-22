@@ -2,42 +2,40 @@ package server
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net"
 	"net/http"
 	"os"
 	"time"
 
-	"github.com/boltdb/bolt"
 	"github.com/gorilla/websocket"
+	"go.mongodb.org/mongo-driver/v2/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
-const (
-	databaseFile = "./database/storage.db"
-)
 
 
-func serverWs(db *bolt.DB, w http.ResponseWriter, r *http.Request){
+func serverWs(db *mongo.Client, w http.ResponseWriter, r *http.Request) {
 	upgrader := websocket.Upgrader{
 		WriteBufferSize: 1024,
-		ReadBufferSize: 1024,
+		ReadBufferSize:  1024,
 	}
 
-
-	conn, err := upgrader.Upgrade(w,r,nil)
+	conn, err := upgrader.Upgrade(w, r, nil)
 
 	if err != nil {
 		log.Fatalf("could not be able to establish connection: %v", err)
 	}
 
 	//create a new client connection
-	newConn := NewConn(conn) 
+	newConn := NewConn(conn)
 	//establish a new connection with the db
 	newConn.ConnectDb(db)
 
 	//write a message to the user requesting for room name to establish connection to
 	err = newConn.WriteOnceConn([]byte("enter the room name or create one?"))
-	if err != nil{			
+	if err != nil {
 		log.Panicf("error while requesting room name: %v", err)
 	}
 
@@ -49,6 +47,7 @@ func serverWs(db *bolt.DB, w http.ResponseWriter, r *http.Request){
 	rn := string(msg)
 	//here we have to simulate an input space where the user is allowed to enter the room name
 	room := newConn.AttachToRoom(rn)
+	room.ConnectDb(db)
 
 	//create new go routines to receive and write data
 	go room.Listen()
@@ -56,11 +55,18 @@ func serverWs(db *bolt.DB, w http.ResponseWriter, r *http.Request){
 	go newConn.WriteMessage()
 }
 
-func RunServer(){
+func RunServer() {
 	//opening database file
-	db, err := serveDb(databaseFile)
+	db, err := serveDb()
+
 	//dont leave any connection hanging once server is shutdown
-	defer db.Close()
+	ctx := context.Background()
+	defer func(){
+		err := db.Disconnect(ctx)
+		if err != nil{
+			log.Fatalf("error while disconnecting to the database: %v", err)
+		}
+	}()
 
 	if err != nil {
 		log.Fatalf("error can not access the database: %v", err)
@@ -68,7 +74,7 @@ func RunServer(){
 
 	//create a new mux handler
 	muxHandler := http.NewServeMux()
-	baseCtx, cancel := context.WithTimeout(context.Background(), 10 * time.Second)
+	baseCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	//handlers for the connection
@@ -76,36 +82,36 @@ func RunServer(){
 		serverWs(db, w, r)
 	})
 
-	
 	//create a new server and run it up
 	server := http.Server{
-		Addr: "localhost:8080",	
+		Addr:    "localhost:8080",
 		Handler: muxHandler,
 		BaseContext: func(l net.Listener) context.Context {
 			return baseCtx
 		},
 	}
-	
+
 	log.Println("server is up and running")
 	err = server.ListenAndServe()
 	if err != nil {
 		log.Fatalf("server shutdown: %v", err)
 	}
-	
+
 }
 
-func serveDb(dbFile string) (*bolt.DB, error){
-	//check if the file exists
-	if _,err := os.Stat(dbFile); err != nil {
-		log.Fatalf("error while setting up database: %v: db file does not exist", err)
+func serveDb() (*mongo.Client, error) {
+	//fetch the uri 
+	log.Println("fetchint the env url...")
+	uri, ok := os.LookupEnv("MONGO_DB_URL")
+	if !ok {
+		log.Panic("database url not found")
 	}
 
-	file, err := bolt.Open(dbFile,0600,&bolt.Options{Timeout: 1 * time.Second})
+	log.Println("connecting to the database...")
+	client, err := mongo.Connect(options.Client().ApplyURI(uri))
 	if err != nil {
-		return nil, err
-	}
+		return nil, fmt.Errorf("error while establishing database connection: %v", err)
+	}	
 
-	return file, nil
+	return client, nil	
 }
-
-

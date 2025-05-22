@@ -4,8 +4,9 @@ import (
 	"log"
 	"time"
 
-	"github.com/boltdb/bolt"
 	"github.com/google/uuid"
+	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
 //@todo: implement the following methods
@@ -22,16 +23,20 @@ import (
 //user can be notified on the message sent
 //3. Ability to create private chatting rooms which are encrypted.
 //4. Ability to create communities with a limit on the number of users
-
 type Room struct {
-	Id string
-	Name string
-	Db *bolt.DB
-	conn map[*Conn]status
+	Id  string
+	Name string 
+	db *mongo.Collection
+	conn map[string]*Conn
 	messages *MessageHub
 	broadcast chan *messageChannel
 	register chan *Conn
 	unregister chan *Conn
+}
+
+type RoomDto struct {
+	Id bson.ObjectID `bson:"_id"`
+	Name string `bson:"room_name"`
 }
 
 //receives the room name as parameter
@@ -41,8 +46,8 @@ func NewRoom(rn string) *Room{
 	room := &Room{
 		Id: id,
 		Name: rn,
-		Db: nil,
-		conn: make(map[*Conn]status),	
+		db: nil,
+		conn: make(map[string]status),	
 		messages: &MessageHub{
 			hub: make(map[*Conn][]*Message),
 		},
@@ -51,6 +56,24 @@ func NewRoom(rn string) *Room{
 		unregister: make(chan *Conn),
 	} 
 	return room
+}
+
+func (room *Room) ConnectDb(db *mongo.Database){
+	log.Println("connection room to database")
+	room.db = db.Collection("rooms")
+}
+
+func (room *Room) DisconnectDb() {
+	room.db = nil
+}
+
+func (room *Room) Serialize() (RoomDto){
+	//@todo: complet the serialization method
+	dto := RoomDto{
+		Name: room.Name,
+	}
+
+	return dto
 }
 
 //always listens for incoming messages
@@ -66,14 +89,14 @@ func (room *Room) Listen(){
 
 			//automatically switch the status of the sender on close 
 			defer func(){
-				room.conn[rcvMessage.sender] = Online
+				room.conn[rcvMessage.sender.Id] = Online
 			}()
 			if !ok {
 				log.Println("error while receiving message")
 				continue
 			}
 			//update the status of the broadcaster
-			room.conn[rcvMessage.sender] = Typing
+			room.conn[rcvMessage.sender.Id] = Typing
 
 			//broadcast to the room users someone is typing
 			for client,_:= range room.conn{

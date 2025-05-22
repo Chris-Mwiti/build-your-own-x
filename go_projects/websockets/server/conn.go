@@ -4,10 +4,9 @@ import (
 	"log"
 	"time"
 
-	"github.com/boltdb/bolt"
 	uuid "github.com/google/uuid"
-
 	"github.com/gorilla/websocket"
+	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
 //keeps track of the clients status
@@ -37,14 +36,14 @@ type Conn struct {
 	activeRoom *Room //will keep track of which room the conn is currently active
 	status status
 	Conn *websocket.Conn
-	Db *bolt.DB
+	Db *mongo.Client
 	send chan *Message
 }
 
 func NewConn(conn *websocket.Conn) (*Conn){
 	id := uuid.NewString()
 
-	log.Println("establishing a new connection...")
+	log.Println("creating a new connection...")
 
 	connection := &Conn{
 		Id: id,
@@ -61,7 +60,7 @@ func NewConn(conn *websocket.Conn) (*Conn){
 	return connection
 }
 
-func (client *Conn) ConnectDb(db *bolt.DB){
+func (client *Conn) ConnectDb(db *mongo.Client){
 	log.Println("connection to database")
 	client.Db = db
 }
