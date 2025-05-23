@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"log"
 	"time"
 
@@ -49,7 +50,7 @@ func NewRoom(rn string) *Room{
 		db: nil,
 		conn: make(map[string]*Conn),	
 		messages: &MessageHub{
-			hub: make(map[*Conn][]*Message),
+			hub: make(map[string][]*Message),
 		},
 		broadcast: make(chan *messageChannel),
 		register: make(chan *Conn),
@@ -77,7 +78,7 @@ func (room *Room) Serialize() (RoomDto){
 }
 
 //always listens for incoming messages
-func (room *Room) Listen(){
+func (room *Room) Listen(ctx context.Context){
 	defer func(){
 		close(room.broadcast)
 		close(room.register)
@@ -86,6 +87,9 @@ func (room *Room) Listen(){
 	for {
 		select{
 		case rcvMessage, ok:= <-room.broadcast:
+			log.Println("broadcasting message to users")
+			//utility check
+			clientCount := len(room.conn)
 
 			if !ok {
 				log.Println("error while receiving message")
@@ -93,11 +97,11 @@ func (room *Room) Listen(){
 			}
 			//update the status of the broadcaster
 			rcvMessage.sender.UpdateConnStatus(Typing)
-			room.conn[rcvMessage.message.Id] = rcvMessage.sender
 
 			//broadcast to the room users someone is typing
 			for _,client:= range room.conn{
 				err := client.Conn.SetWriteDeadline(time.Now().Add(writeDeadline))
+				log.Printf("client conn: %d", clientCount)
 				if err != nil {
 					log.Panicf("error while setting write deadline: %v", err)
 				}
@@ -113,6 +117,7 @@ func (room *Room) Listen(){
 				log.Println("error while registering new client")	
 				continue
 			}
+			room.conn[client.Id] = client
 			client.UpdateConnStatus(Online)
 
 		//unregister event listener
@@ -123,8 +128,12 @@ func (room *Room) Listen(){
 			}
 			close(client.send)
 			delete(room.conn, client.Id)
+	
+		case <-ctx.Done():
+			return
 
 		}
+
 	}
 }
 

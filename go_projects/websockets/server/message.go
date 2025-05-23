@@ -25,13 +25,14 @@ type messageChannel struct {
 //2. Delete a Message
 //3. Update a meesage
 type MessageHub struct {
-	hub map[*Conn][]*Message
+	//the hub should store a map of the map of the conn id with the message sent
+	hub map[string][]*Message
 }
 
 func (msgHub *MessageHub) appendMessage(conn *Conn, msg []byte){
 	log.Println("appending message to the hub")
 	id := uuid.New().String()
-	msgHub.hub[conn] = append(msgHub.hub[conn], &Message{
+	msgHub.hub[conn.Id] = append(msgHub.hub[conn.Id], &Message{
 		Id: id,	
 		timestamp: time.Now(),
 		data: msg,
@@ -39,7 +40,7 @@ func (msgHub *MessageHub) appendMessage(conn *Conn, msg []byte){
 }
 
 func (msgHub *MessageHub) findMessages(conn *Conn)([]*Message){
-	messages, ok := msgHub.hub[conn]	
+	messages, ok := msgHub.hub[conn.Id]	
 
 	if !ok {
 		log.Println("conn not found in the hub")

@@ -73,6 +73,7 @@ func (client *Conn) ConnectDb(db *mongo.Database){
 	log.Println("connection to database")
 	client.Db = db.Collection("clients")
 }
+
 func (client *Conn) DisconnectDb(){
 	if client.Db != nil{
 		log.Println("disconnecting connection")
@@ -97,7 +98,7 @@ func (client *Conn) AttachToRoom(rn string) (*Room){
 	}
 	
 	room := client.Rooms[rn]
-	log.Println("registering the client to the roo")
+	log.Println("registering the client to the room")
 	room.conn[client.Id] = client
 
 	log.Println("setting current room active")
@@ -132,22 +133,29 @@ func (client *Conn) UpdateConnStatus(s status){
 }
 
 func (client *Conn) WriteOnceConn(msg []byte) (error) {
-	defer client.Conn.Close()
 	err := client.Conn.WriteMessage(websocket.TextMessage, msg)
 	return err
 }
 
 func (client *Conn) ReadOnceConn() ([]byte, error) {
-	defer client.Conn.Close()
-	var msg []byte
-	_, reader, err:= client.Conn.NextReader()
-	reader.Read(msg)
-
-	if err != nil{
-		return nil, err
-	}
+	var rn []byte
 	
-	return msg, nil
+	for {
+		_,msg,err := client.Conn.ReadMessage()	
+
+		if err != nil{
+			log.Println("could not receive the room name")
+			break
+		}
+
+		if string(msg) != "" {
+			rn = msg
+			break
+		}	
+
+	}
+
+	return rn, nil
 }
 
 func (client *Conn) Serialize() (ClientDto){
@@ -165,7 +173,7 @@ func(client *Conn) ReadMessage(){
 		}
 	}()
 	client.Conn.SetReadLimit(readLimit)
-	client.Conn.SetPongHandler(func(appData string) error {client.Conn.SetReadDeadline(time.Now().Add(setPingWait)); return nil})
+		client.Conn.SetPongHandler(func(appData string) error {client.Conn.SetReadDeadline(time.Now().Add(setPingWait)); return nil})
 
 	//always read for a message
 	for{
@@ -173,8 +181,11 @@ func(client *Conn) ReadMessage(){
 
 		if err != nil{
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseAbnormalClosure, websocket.CloseGoingAway) {
-				log.Printf("unexpected error while read websocket: %v", err)
+				log.Printf("closing connection...: %v", err)
+				break
 			}
+
+			log.Printf("unexpected error while closing connection: %v",err)
 			break
 		}
 
@@ -188,33 +199,23 @@ func(client *Conn) ReadMessage(){
 func (client *Conn) WriteMessage(){
 	defer client.Conn.Close()
 
-	if _,ok :=<-client.send; !ok{
+	if _,ok := <-client.send; !ok{
 		log.Println("client send channel has been closed")
+		return
 	}
 	client.Conn.SetWriteDeadline(time.Now().Add(writeDeadline))
 
 	for message := range client.send {
 
 		log.Println("sending message to client")
-		writer, err := client.Conn.NextWriter(websocket.TextMessage)			
-
-
-		if err != nil{
-			//check if the error is an unexpected error
-			if websocket.IsUnexpectedCloseError(err, websocket.CloseAbnormalClosure, websocket.CloseGoingAway) {
-				log.Printf("unexpeceted error while writing to the connection: %v", err)
-				break
-			}
-			break
-		}
-
-		_,err = writer.Write(message.data)
+		err := client.Conn.WriteMessage(websocket.TextMessage, message.data)
 
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseAbnormalClosure, websocket.CloseGoingAway){
 				log.Printf("unexpected error while writing to the connection: %v", err)
 				break
 			}	
+			log.Printf("error while writing to the connection: %v",err)
 			break
 		}
 	}

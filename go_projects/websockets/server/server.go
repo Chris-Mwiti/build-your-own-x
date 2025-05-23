@@ -16,7 +16,9 @@ import (
 
 
 
-func serverWs(db *mongo.Client, w http.ResponseWriter, r *http.Request) {
+func serverWs(db *mongo.Database, w http.ResponseWriter, r *http.Request) {
+	ctx := context.WithoutCancel(context.Background()) 
+	
 	upgrader := websocket.Upgrader{
 		WriteBufferSize: 1024,
 		ReadBufferSize:  1024,
@@ -50,8 +52,8 @@ func serverWs(db *mongo.Client, w http.ResponseWriter, r *http.Request) {
 	room.ConnectDb(db)
 
 	//create new go routines to receive and write data
-	go room.Listen()
 	go newConn.ReadMessage()
+	go room.Listen(ctx)
 	go newConn.WriteMessage()
 }
 
@@ -70,17 +72,17 @@ func RunServer() {
 		log.Fatalf("error can not access the database: %v", err)
 	}
 	//setup the database to be used
-	appDb = db.Database("tchat-db")
+	appDb := db.Database("tchat-db")
 
 
 	//create a new mux handler
 	muxHandler := http.NewServeMux()
-	baseCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	baseCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
 	//handlers for the connection
 	muxHandler.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
-		serverWs(db, w, r)
+		serverWs(appDb, w, r)
 	})
 
 	//create a new server and run it up
