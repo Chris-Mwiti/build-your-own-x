@@ -1,11 +1,13 @@
 package server
 
 import (
+	"context"
 	"log"
 	"time"
 
 	uuid "github.com/google/uuid"
 	"github.com/gorilla/websocket"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 )
@@ -32,8 +34,8 @@ const (
 //3. Rename the send channel to receive coz why not
 //4.
 type Conn struct {
-	Id string
-	//@todo swap this to a string slice of room ids
+	Id primitive.ObjectID
+	ClientId string
 	Rooms map[string]*Room //will keep track of the engage rooms by the connection 
 	activeRoom *Room //will keep track of which room the conn is currently active
 	status status
@@ -43,9 +45,10 @@ type Conn struct {
 }
 
 type ClientDto struct {
-	Id bson.ObjectID `bson:"_id"`
-	Rooms map[string]*Room `bson:"connected_room"`
-	ActiveRoom *Room `bson:"active_room"`
+	Id primitive.ObjectID `bson:"_id"`
+	ClientId string `bson:"client_id"`
+	Rooms map[string]Room `bson:"connected_room"`
+	ActiveRoom Room `bson:"active_room"`
 	Status string `bson:"status"`
 }
 
@@ -158,8 +161,28 @@ func (client *Conn) ReadOnceConn() ([]byte, error) {
 	return rn, nil
 }
 
+func (client *Conn) generateId(){
+	id := uuid.NewString()
+	client.ClientId = id
+}
+
 func (client *Conn) Serialize() (ClientDto){
-	dto := ClientDto{}
+	//serialze the client rooms into a format to be supported
+	var serRoooms map[string]Room
+	for id, room := range client.Rooms {
+		serRoooms[id] = *room
+	}
+
+	//generate a new id for the client
+	client.generateId()
+
+	dto := ClientDto{
+		Id: primitive.NewObjectID(),
+		ClientId: client.ClientId,
+		Rooms: serRoooms,
+		ActiveRoom: *client.activeRoom,
+		Status: string(client.status), 
+	}
 	return dto
 }
 
@@ -220,6 +243,64 @@ func (client *Conn) WriteMessage(){
 		}
 	}
 
+}
+
+//database operations...
+func (client *Conn) CreateClient(orgCtx context.Context)(*mongo.InsertOneResult, error){
+	ctx,cancel := context.WithTimeout(orgCtx, time.Second * 3)
+	defer cancel()
+
+	result, err := client.Db.InsertOne(ctx, client.Serialize())
+	if err != nil {
+		log.Printf("[createClient]: encountered error while creating client: \n")
+		return nil, err
+	}
+
+	log.Printf("[createclient]: successfully inserted result: %v", result)
+
+	return result, nil
+
+}
+
+func (client *Conn) FindClient(orgCtx context.Context,filter *bson.D)(*ClientDto,error){
+	ctx, cancel := context.WithTimeout(orgCtx, time.Second * 3)
+	defer cancel()
+
+	var result ClientDto
+	err := client.Db.FindOne(ctx, filter).Decode(&result)
+
+	if err != nil {
+		log.Println("[findclient]: encountered error while finding client")
+		return nil, err
+	}
+
+	return &result, nil
+}
+
+func (client *Conn) UpdateClient(orgCtx context.Context, filter *bson.D, update *bson.D)(*mongo.UpdateResult,error){
+	ctx, cancel := context.WithTimeout(orgCtx, time.Second * 3)
+	defer cancel()
+
+	result, err := client.Db.UpdateOne(ctx, filter,update) 
+	if err != nil {
+		log.Println("[updateclient]; error while updating document")
+		return nil, err
+	}
+
+	return result, nil
+} 
+
+func (client *Conn) DeleteClient(orgCtx context.Context, filter *bson.D)(*mongo.DeleteResult, error){
+	ctx, cancel := context.WithTimeout(orgCtx, time.Second * 3)
+	defer cancel()
+
+	result, err := client.Db.DeleteOne(ctx, filter)
+	if err != nil {
+		log.Println("[deleteclient]; error while deleting document")
+		return nil, err
+	}
+
+	return result, nil
 }
 
 
