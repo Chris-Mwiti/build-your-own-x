@@ -5,8 +5,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/google/uuid"
-	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
@@ -25,7 +24,8 @@ import (
 //3. Ability to create private chatting rooms which are encrypted.
 //4. Ability to create communities with a limit on the number of users
 type Room struct {
-	Id  string
+	Id  primitive.ObjectID
+	RoomId string
 	Name string 
 	db *mongo.Collection
 	conn map[string]*Conn
@@ -36,16 +36,15 @@ type Room struct {
 }
 
 type RoomDto struct {
-	Id bson.ObjectID `bson:"_id"`
+	Id primitive.ObjectID `bson:"_id"`
 	Name string `bson:"room_name"`
 }
 
 //receives the room name as parameter
 //used to create a new room of client conn
 func NewRoom(rn string) *Room{ 
-	id := uuid.NewString();
 	room := &Room{
-		Id: id,
+		Id: primitive.NewObjectID(),
 		Name: rn,
 		db: nil,
 		conn: make(map[string]*Conn),	
@@ -117,7 +116,7 @@ func (room *Room) Listen(ctx context.Context){
 				log.Println("error while registering new client")	
 				continue
 			}
-			room.conn[client.Id] = client
+			room.conn[client.ClientId] = client
 			client.UpdateConnStatus(Online)
 
 		//unregister event listener
@@ -127,7 +126,7 @@ func (room *Room) Listen(ctx context.Context){
 				continue
 			}
 			close(client.send)
-			delete(room.conn, client.Id)
+			delete(room.conn, client.ClientId)
 	
 		case <-ctx.Done():
 			return

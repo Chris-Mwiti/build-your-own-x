@@ -35,6 +35,13 @@ func serverWs(db *mongo.Database, w http.ResponseWriter, r *http.Request) {
 	//establish a new connection with the db
 	newConn.ConnectDb(db)
 
+	//create a record of the connection 
+	_, err = newConn.CreateClient(ctx)
+	if err != nil{
+		log.Panicf("error while creating client: %v", err)
+	}
+
+
 	//write a message to the user requesting for room name to establish connection to
 	err = newConn.WriteOnceConn([]byte("enter the room name or create one?"))
 	if err != nil {

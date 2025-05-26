@@ -1,5 +1,4 @@
 package server
-
 import (
 	"context"
 	"log"
@@ -7,9 +6,9 @@ import (
 
 	uuid "github.com/google/uuid"
 	"github.com/gorilla/websocket"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 //keeps track of the clients status
@@ -53,12 +52,10 @@ type ClientDto struct {
 }
 
 func NewConn(conn *websocket.Conn) (*Conn){
-	id := uuid.NewString()
-
 	log.Println("creating a new connection...")
 
 	connection := &Conn{
-		Id: id,
+		Id: primitive.NewObjectID(),
 		Rooms: make(map[string]*Room),
 		Conn: conn,
 		Db: nil,
@@ -93,7 +90,7 @@ func (client *Conn) AttachToRoom(rn string) (*Room){
 		nr := NewRoom(rn)
 		//register to the room
 		log.Println("registering the client to the room")
-		nr.conn[client.Id] = client
+		nr.conn[client.ClientId] = client
 		client.appendRoom(nr)
 		client.setActiveRoom(nr)
 
@@ -102,7 +99,7 @@ func (client *Conn) AttachToRoom(rn string) (*Room){
 	
 	room := client.Rooms[rn]
 	log.Println("registering the client to the room")
-	room.conn[client.Id] = client
+	room.conn[client.ClientId] = client
 
 	log.Println("setting current room active")
 	client.setActiveRoom(room)
@@ -247,6 +244,7 @@ func (client *Conn) WriteMessage(){
 
 //database operations...
 func (client *Conn) CreateClient(orgCtx context.Context)(*mongo.InsertOneResult, error){
+	log.Println("creating new client connection....")
 	ctx,cancel := context.WithTimeout(orgCtx, time.Second * 3)
 	defer cancel()
 
@@ -256,7 +254,7 @@ func (client *Conn) CreateClient(orgCtx context.Context)(*mongo.InsertOneResult,
 		return nil, err
 	}
 
-	log.Printf("[createclient]: successfully inserted result: %v", result)
+	log.Printf("[createclient]: successfully inserted result: %v\n", result)
 
 	return result, nil
 
