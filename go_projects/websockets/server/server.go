@@ -17,7 +17,7 @@ import (
 
 
 func serverWs(db *mongo.Database, w http.ResponseWriter, r *http.Request) {
-	ctx := context.WithoutCancel(context.Background()) 
+	ctx, cancel := context.WithCancel(context.Background()) 
 	
 	upgrader := websocket.Upgrader{
 		WriteBufferSize: 1024,

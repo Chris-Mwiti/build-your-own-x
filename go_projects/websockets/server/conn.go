@@ -183,7 +183,7 @@ func (client *Conn) Serialize() (ClientDto){
 	return dto
 }
 
-func(client *Conn) ReadMessage(){
+func(client *Conn) ReadMessage(ctx context.Context){
 	//set the defaults such as pingtimeouts, ponttimeouts, and close methods
 	defer func(){
 		log.Println("closing the client connection")
@@ -195,8 +195,14 @@ func(client *Conn) ReadMessage(){
 	client.Conn.SetReadLimit(readLimit)
 	client.Conn.SetPongHandler(func(appData string) error {client.Conn.SetReadDeadline(time.Now().Add(setPingWait)); return nil})
 
+
 	//always read for a message
 	for{
+		select{
+		case <-ctx.Done():
+			return	
+
+		default: 
 		_,message,err := client.Conn.ReadMessage()
 
 		if err != nil{
@@ -213,10 +219,12 @@ func(client *Conn) ReadMessage(){
 		newMsg := newChanMessage(client,message)
 		client.activeRoom.messages.appendMessage(client, message)
 		client.activeRoom.broadcast <- newMsg 
+
+		}
 	}
 }
 
-func (client *Conn) WriteMessage(){
+func (client *Conn) WriteMessage(ctx context.Context){
 	defer client.Conn.Close()
 
 	if _,ok := <-client.send; !ok{
@@ -225,21 +233,28 @@ func (client *Conn) WriteMessage(){
 	}
 	client.Conn.SetWriteDeadline(time.Now().Add(writeDeadline))
 
-	for message := range client.send {
+	for {
+		select{
+		case <-ctx.Done():
+			return
 
-		log.Println("sending message to client")
-		err := client.Conn.WriteMessage(websocket.TextMessage, message.data)
+		default:
+			for message := range client.send {
 
-		if err != nil {
-			if websocket.IsUnexpectedCloseError(err, websocket.CloseAbnormalClosure, websocket.CloseGoingAway){
-				log.Printf("unexpected error while writing to the connection: %v", err)
-				break
-			}	
-			log.Printf("error while writing to the connection: %v",err)
-			break
+				log.Println("sending message to client")
+				err := client.Conn.WriteMessage(websocket.TextMessage, message.data)
+
+				if err != nil {
+					if websocket.IsUnexpectedCloseError(err, websocket.CloseAbnormalClosure, websocket.CloseGoingAway){
+						log.Printf("unexpected error while writing to the connection: %v", err)
+						break
+					}	
+					log.Printf("error while writing to the connection: %v",err)
+					break
+				}
+			}
 		}
-	}
-
+	}	
 }
 
 //database operations...
