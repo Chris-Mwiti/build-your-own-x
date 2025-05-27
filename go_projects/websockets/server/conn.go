@@ -1,14 +1,16 @@
 package server
+
 import (
 	"context"
+	"fmt"
 	"log"
 	"time"
 
 	uuid "github.com/google/uuid"
 	"github.com/gorilla/websocket"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 //keeps track of the clients status
@@ -46,8 +48,8 @@ type Conn struct {
 type ClientDto struct {
 	Id primitive.ObjectID `bson:"_id"`
 	ClientId string `bson:"client_id"`
-	Rooms map[string]Room `bson:"connected_room"`
-	ActiveRoom Room `bson:"active_room"`
+	Rooms map[string]RoomDto `bson:"connected_room"`
+	ActiveRoom RoomDto `bson:"active_room"`
 	Status string `bson:"status"`
 }
 
@@ -165,25 +167,25 @@ func (client *Conn) generateId(){
 
 func (client *Conn) Serialize() (ClientDto){
 	//deserialze the client rooms into a format to be supported
-	serRoooms := make(map[string]Room)
+	serRoooms := make(map[string]RoomDto)
 	for id, room := range client.Rooms {
-		serRoooms[id] = *room
+		serRoooms[id] = room.Serialize()
 	}
 
 	//generate a new id for the client
 	client.generateId()
 
 	dto := ClientDto{
-		Id: primitive.NewObjectID(),
+		Id: client.Id,
 		ClientId: client.ClientId,
 		Rooms: serRoooms,
-		ActiveRoom: Room{},
+		ActiveRoom: RoomDto{},
 		Status: string(client.status), 
 	}
 	return dto
 }
 
-func(client *Conn) ReadMessage(ctx context.Context){
+func(client *Conn) ReadMessage(ctx context.Context)(error){
 	//set the defaults such as pingtimeouts, ponttimeouts, and close methods
 	defer func(){
 		log.Println("closing the client connection")
@@ -200,44 +202,39 @@ func(client *Conn) ReadMessage(ctx context.Context){
 	for{
 		select{
 		case <-ctx.Done():
-			return	
+			return nil	
 
 		default: 
-		_,message,err := client.Conn.ReadMessage()
+			_,message,err := client.Conn.ReadMessage()
 
-		if err != nil{
-			if websocket.IsUnexpectedCloseError(err, websocket.CloseAbnormalClosure, websocket.CloseGoingAway) {
-				log.Printf("unexpected error while closing connection: %v",err)
-				break
+			if err != nil{
+				if websocket.IsUnexpectedCloseError(err, websocket.CloseAbnormalClosure, websocket.CloseGoingAway) {
+					log.Printf("unexpected error while closing connection: %v",err)
+					return err
+				}
+
+				log.Printf("closing connection...: %v", err)
+				return err
 			}
 
-			log.Printf("closing connection...: %v", err)
-			break
-		}
-
-		//construct the messageSendOb
-		newMsg := newChanMessage(client,message)
-		client.activeRoom.messages.appendMessage(client, message)
-		client.activeRoom.broadcast <- newMsg 
+			//construct the messageSendOb
+			newMsg := newChanMessage(client,message)
+			client.activeRoom.messages.appendMessage(client, message)
+			client.activeRoom.broadcast <- newMsg 
 
 		}
 	}
 }
 
-func (client *Conn) WriteMessage(ctx context.Context){
+func (client *Conn) WriteMessage(ctx context.Context)(error){
 	defer client.Conn.Close()
 
-	if _,ok := <-client.send; !ok{
-		log.Println("client send channel has been closed")
-		return
-	}
 	client.Conn.SetWriteDeadline(time.Now().Add(writeDeadline))
 
 	for {
 		select{
 		case <-ctx.Done():
-			return
-
+			return nil
 		default:
 			for message := range client.send {
 
@@ -247,14 +244,38 @@ func (client *Conn) WriteMessage(ctx context.Context){
 				if err != nil {
 					if websocket.IsUnexpectedCloseError(err, websocket.CloseAbnormalClosure, websocket.CloseGoingAway){
 						log.Printf("unexpected error while writing to the connection: %v", err)
-						break
+						return err
 					}	
 					log.Printf("error while writing to the connection: %v",err)
-					break
+					return err
 				}
 			}
 		}
 	}	
+}
+
+func (client *Conn) Close(ctx context.Context)(error){
+	closeCtx, cancel := context.WithCancel(ctx)
+	defer func(){
+		close(client.send)
+		cancel()
+		err := client.Conn.Close()
+		if err != nil {
+			if websocket.IsUnexpectedCloseError(err, websocket.CloseAbnormalClosure, websocket.CloseGoingAway){
+				log.Panicf("[ClientClose]: unexpected error while closing conn: %v", err)
+			}
+			log.Println("[ClientClose]: error while closing the client connection")
+		}
+	}()
+
+	filter := bson.D{bson.E{Key: "client_id", Value: client.ClientId}}
+	update := bson.D{bson.E{Key: "$set", Value: bson.E{Key: "status", Value: string(Offline)}}}
+	_,err := client.UpdateClient(closeCtx, filter, update)	
+	if err != nil {
+		log.Println("[ClientClose]: error while updating the status of the client")
+		return err
+	}
+	return nil
 }
 
 //database operations...
