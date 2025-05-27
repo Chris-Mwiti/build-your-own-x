@@ -77,12 +77,8 @@ func (room *Room) Serialize() (RoomDto){
 }
 
 //always listens for incoming messages
-func (room *Room) Listen(ctx context.Context){
-	defer func(){
-		close(room.broadcast)
-		close(room.register)
-		close(room.unregister)
-	}()
+func (room *Room) Listen(ctx context.Context)(error){
+	defer room.Close()
 	for {
 		select{
 		case rcvMessage, ok:= <-room.broadcast:
@@ -102,7 +98,8 @@ func (room *Room) Listen(ctx context.Context){
 				err := client.Conn.SetWriteDeadline(time.Now().Add(writeDeadline))
 				log.Printf("client conn: %d", clientCount)
 				if err != nil {
-					log.Panicf("error while setting write deadline: %v", err)
+					log.Printf("[RoomListen]:error while setting write deadline: %v", err)
+					return err
 				}
 				//send the message to each of the clients
 				client.send <- rcvMessage.message
@@ -127,13 +124,22 @@ func (room *Room) Listen(ctx context.Context){
 			}
 			close(client.send)
 			delete(room.conn, client.ClientId)
-	
+
 		case <-ctx.Done():
-			return
+			return nil
 
 		}
 
 	}
+}
+
+func (room *Room) Close(){
+	defer func(){
+	 close(room.register)
+	 close(room.unregister)
+	 close(room.broadcast)
+	}()
+	//@todo: add fields to the room to support the status discovery
 }
 
 

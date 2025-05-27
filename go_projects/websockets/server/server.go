@@ -12,12 +12,14 @@ import (
 	"github.com/gorilla/websocket"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
+	"golang.org/x/sync/errgroup"
 )
 
 
 
 func serverWs(db *mongo.Database, w http.ResponseWriter, r *http.Request) {
-	ctx, cancel := context.WithCancel(context.Background()) 
+	ctx, cancel := context.WithCancel(r.Context()) 
+	defer cancel()
 	
 	upgrader := websocket.Upgrader{
 		WriteBufferSize: 1024,
@@ -56,10 +58,20 @@ func serverWs(db *mongo.Database, w http.ResponseWriter, r *http.Request) {
 	room := newConn.AttachToRoom(rn)
 	room.ConnectDb(db)
 
+
+	//create an error group that will sync all the go routines for a client conn
+	group := new(errgroup.Group)
+
 	//create new go routines to receive and write data
-	go newConn.ReadMessage()
-	go room.Listen(ctx)
-	go newConn.WriteMessage()
+	group.Go(func() error {
+		return newConn.ReadMessage(ctx)
+	})
+	group.Go(func() error {
+		return room.Listen(ctx)
+	})
+	group.Go(func() error {
+		return newConn.WriteMessage(ctx)
+	})
 }
 
 func RunServer() {
