@@ -120,7 +120,7 @@ func (client *Conn) DetachToRoom(rn string){
 
 func (client *Conn) appendRoom(room *Room){
 	log.Println("appending room to the existing client rooms.")
-	client.Rooms[room.Id] = room
+	client.Rooms[room.RoomId] = room
 }
 
 func (client *Conn) setActiveRoom(room *Room){
@@ -164,8 +164,8 @@ func (client *Conn) generateId(){
 }
 
 func (client *Conn) Serialize() (ClientDto){
-	//serialze the client rooms into a format to be supported
-	var serRoooms map[string]Room
+	//deserialze the client rooms into a format to be supported
+	serRoooms := make(map[string]Room)
 	for id, room := range client.Rooms {
 		serRoooms[id] = *room
 	}
@@ -177,7 +177,7 @@ func (client *Conn) Serialize() (ClientDto){
 		Id: primitive.NewObjectID(),
 		ClientId: client.ClientId,
 		Rooms: serRoooms,
-		ActiveRoom: *client.activeRoom,
+		ActiveRoom: Room{},
 		Status: string(client.status), 
 	}
 	return dto
@@ -193,7 +193,7 @@ func(client *Conn) ReadMessage(){
 		}
 	}()
 	client.Conn.SetReadLimit(readLimit)
-		client.Conn.SetPongHandler(func(appData string) error {client.Conn.SetReadDeadline(time.Now().Add(setPingWait)); return nil})
+	client.Conn.SetPongHandler(func(appData string) error {client.Conn.SetReadDeadline(time.Now().Add(setPingWait)); return nil})
 
 	//always read for a message
 	for{
@@ -201,11 +201,11 @@ func(client *Conn) ReadMessage(){
 
 		if err != nil{
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseAbnormalClosure, websocket.CloseGoingAway) {
-				log.Printf("closing connection...: %v", err)
+				log.Printf("unexpected error while closing connection: %v",err)
 				break
 			}
 
-			log.Printf("unexpected error while closing connection: %v",err)
+			log.Printf("closing connection...: %v", err)
 			break
 		}
 
@@ -260,7 +260,7 @@ func (client *Conn) CreateClient(orgCtx context.Context)(*mongo.InsertOneResult,
 
 }
 
-func (client *Conn) FindClient(orgCtx context.Context,filter *bson.D)(*ClientDto,error){
+func (client *Conn) FindClient(orgCtx context.Context,filter bson.D)(*ClientDto,error){
 	ctx, cancel := context.WithTimeout(orgCtx, time.Second * 3)
 	defer cancel()
 
@@ -268,27 +268,27 @@ func (client *Conn) FindClient(orgCtx context.Context,filter *bson.D)(*ClientDto
 	err := client.Db.FindOne(ctx, filter).Decode(&result)
 
 	if err != nil {
-		log.Println("[findclient]: encountered error while finding client")
+		log.Printf("[findclient]: encountered error while finding client filter: %v; error: %v\n", filter, err)
 		return nil, err
 	}
 
 	return &result, nil
 }
 
-func (client *Conn) UpdateClient(orgCtx context.Context, filter *bson.D, update *bson.D)(*mongo.UpdateResult,error){
+func (client *Conn) UpdateClient(orgCtx context.Context, filter bson.D, update bson.D)(*mongo.UpdateResult,error){
 	ctx, cancel := context.WithTimeout(orgCtx, time.Second * 3)
 	defer cancel()
 
 	result, err := client.Db.UpdateOne(ctx, filter,update) 
 	if err != nil {
-		log.Println("[updateclient]; error while updating document")
+		log.Printf("[updateclient]; error while updating document filter: %v;error: %v;", filter, err)
 		return nil, err
 	}
 
 	return result, nil
 } 
 
-func (client *Conn) DeleteClient(orgCtx context.Context, filter *bson.D)(*mongo.DeleteResult, error){
+func (client *Conn) DeleteClient(orgCtx context.Context, filter bson.D)(*mongo.DeleteResult, error){
 	ctx, cancel := context.WithTimeout(orgCtx, time.Second * 3)
 	defer cancel()
 

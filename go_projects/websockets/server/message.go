@@ -32,7 +32,7 @@ type MessageHub struct {
 func (msgHub *MessageHub) appendMessage(conn *Conn, msg []byte){
 	log.Println("appending message to the hub")
 	id := uuid.New().String()
-	msgHub.hub[conn.Id] = append(msgHub.hub[conn.Id], &Message{
+	msgHub.hub[conn.ClientId] = append(msgHub.hub[conn.ClientId], &Message{
 		Id: id,	
 		timestamp: time.Now(),
 		data: msg,
@@ -40,7 +40,7 @@ func (msgHub *MessageHub) appendMessage(conn *Conn, msg []byte){
 }
 
 func (msgHub *MessageHub) findMessages(conn *Conn)([]*Message){
-	messages, ok := msgHub.hub[conn.Id]	
+	messages, ok := msgHub.hub[conn.ClientId]	
 
 	if !ok {
 		log.Println("conn not found in the hub")
