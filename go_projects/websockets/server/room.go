@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
@@ -27,8 +28,12 @@ type Room struct {
 	Id  primitive.ObjectID
 	RoomId string
 	Name string 
+	Description string
+	MaxConn int
+	IsPrivate bool
+	CreatedAt time.Time
 	db *mongo.Collection
-	conn map[string]*Conn
+	Conns map[string]*Conn
 	messages *MessageHub
 	broadcast chan *messageChannel
 	register chan *Conn
@@ -38,16 +43,26 @@ type Room struct {
 type RoomDto struct {
 	Id primitive.ObjectID `bson:"_id"`
 	Name string `bson:"room_name"`
+	RoomId string `bson:"room_id"`
+	Description string `bson:"room_description"`
+	MaxConn int `bson:"room_maxconn"`
+	IsPrivate bool `bson:"room_isprivate"`
+	CreatedAt time.Time `bson:"room_createdat"`
+	Conns interface{} `bson:"room_conns"`
 }
 
 //receives the room name as parameter
 //used to create a new room of client conn
-func NewRoom(rn string) *Room{ 
+func NewRoom(rn string,description string,maxconn int, isprivate bool) *Room{ 
 	room := &Room{
 		Id: primitive.NewObjectID(),
 		Name: rn,
+		Description: description,
+		MaxConn: maxconn,
+		IsPrivate: isprivate,
+		CreatedAt: time.Now(),
 		db: nil,
-		conn: make(map[string]*Conn),	
+		Conns: make(map[string]*Conn),	
 		messages: &MessageHub{
 			hub: make(map[string][]*Message),
 		},
@@ -68,12 +83,30 @@ func (room *Room) DisconnectDb() {
 }
 
 func (room *Room) Serialize() (RoomDto){
-	//@todo: complet the serialization method
+	conns := make(map[string]Conn)
+
+	//@todo: refactor and modify the code below to reduce runtime
+	for id, conn := range room.Conns{
+		conns[id] = *conn
+	}
+
 	dto := RoomDto{
+		Id: room.Id,
 		Name: room.Name,
+		Conns: conns,
+		Description: room.Description,
+		MaxConn: room.MaxConn,
+		IsPrivate: room.IsPrivate,
+		CreatedAt: room.CreatedAt,
 	}
 
 	return dto
+}
+
+func DeserializeRoom(room *Room, dto RoomDto){
+	room.RoomId = dto.RoomId
+	room.Id = dto.Id
+	room.Description = dto.Description
 }
 
 //always listens for incoming messages
@@ -84,7 +117,7 @@ func (room *Room) Listen(ctx context.Context)(error){
 		case rcvMessage, ok:= <-room.broadcast:
 			log.Println("broadcasting message to users")
 			//utility check
-			clientCount := len(room.conn)
+			clientCount := len(room.Conns)
 
 			if !ok {
 				log.Println("error while receiving message")
@@ -94,7 +127,7 @@ func (room *Room) Listen(ctx context.Context)(error){
 			rcvMessage.sender.UpdateConnStatus(Typing)
 
 			//broadcast to the room users someone is typing
-			for _,client:= range room.conn{
+			for _,client:= range room.Conns{
 				err := client.Conn.SetWriteDeadline(time.Now().Add(writeDeadline))
 				log.Printf("client conn: %d", clientCount)
 				if err != nil {
@@ -113,7 +146,7 @@ func (room *Room) Listen(ctx context.Context)(error){
 				log.Println("error while registering new client")	
 				continue
 			}
-			room.conn[client.ClientId] = client
+			room.Conns[client.ClientId] = client
 			client.UpdateConnStatus(Online)
 
 		//unregister event listener
@@ -123,7 +156,7 @@ func (room *Room) Listen(ctx context.Context)(error){
 				continue
 			}
 			close(client.send)
-			delete(room.conn, client.ClientId)
+			delete(room.Conns, client.ClientId)
 
 		case <-ctx.Done():
 			return nil
@@ -140,6 +173,61 @@ func (room *Room) Close(){
 	 close(room.broadcast)
 	}()
 	//@todo: add fields to the room to support the status discovery
+}
+
+
+//room model operations
+
+func(room *Room) CreateRoom(orgCtx context.Context)(*mongo.InsertOneResult, error){
+	ctx, cancel := context.WithTimeout(orgCtx, 3 * time.Second)	
+	defer cancel()
+
+	result, err := room.db.InsertOne(ctx, room.Serialize())
+	if err != nil {
+		log.Printf("[CreateRoom]: error while creating room: %v",room.Serialize())
+		return nil, err
+	}
+	return result, nil
+}
+
+func(room *Room) FindRoom(orgCtx context.Context, filter bson.D)(*Room, error){
+	ctx, cancel := context.WithTimeout(orgCtx, 3 * time.Second)
+	defer cancel()
+	var result Room
+
+	err := room.db.FindOne(ctx, filter).Decode(&result)
+	if err != nil{
+		log.Printf("[FindRoom]: error while finding room of filter: %v", filter)
+		return nil, err
+	}
+
+	return &result, err
+}
+
+func (room *Room) UpdateRoom(orgCtx context.Context, filter bson.D, update bson.D)(*mongo.UpdateResult, error){
+	ctx, cancel := context.WithTimeout(orgCtx, 3 * time.Second)	
+	defer cancel()
+
+	result, err := room.db.UpdateOne(ctx, filter, update)
+
+	if err != nil {
+		log.Printf("[UpdateRoom]: error while updating room of filter: %v", filter)
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func (room *Room) DeleteRoom(orgCtx context.Context, filter bson.D)(*mongo.DeleteResult,error){
+	ctx, cancel := context.WithTimeout(orgCtx, 3 * time.Second)
+	defer cancel()
+
+	result, err := room.db.DeleteOne(ctx, filter)
+	if err != nil {
+		log.Printf("[DeleteRoom]: error while deleting room of filter: %v", filter)
+		return nil, err
+	} 
+	return result, nil
 }
 
 

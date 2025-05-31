@@ -85,28 +85,39 @@ func (client *Conn) DisconnectDb(){
 }
 
 
-func (client *Conn) AttachToRoom(rn string) (*Room){
-	if _,ok := client.Rooms[rn]; !ok{
-		log.Println("room does not exist...creating one")
-		//now one can create the room 
-		nr := NewRoom(rn)
-		//register to the room
-		log.Println("registering the client to the room")
-		nr.conn[client.ClientId] = client
-		client.appendRoom(nr)
-		client.setActiveRoom(nr)
+//creates and store a new room in the db
+//@todo: the create room functionality has alot of unmodular process....(do alot at the same time)
+func (client *Conn) CreateRoom(roomName string, desc string, maxconn int, isprivate bool, ctx context.Context)(*Room, error){
+	room := NewRoom(roomName,desc,maxconn,isprivate)
+	room.ConnectDb(client.Db.Database())
 
-		return nr
+	log.Println("creating new room...")
+	_, err := room.CreateRoom(ctx)
+	if err != nil{
+		log.Printf("[ClientCreateRoom]: error while client creating room: %v", err)
+		return nil, err
 	}
-	
-	room := client.Rooms[rn]
-	log.Println("registering the client to the room")
-	room.conn[client.ClientId] = client
+
+	client.appendRoom(room)
+	client.setActiveRoom(room)
+	return room, nil
+}
+
+func (client *Conn) AttachToRoom(roomId string, ctx context.Context) (*Room, error){
+	room := new(Room)	
+
+	//find the room by its id
+	filter := bson.D{bson.E{Key: "room_id", Value: roomId}}
+	foundRoom, err := room.FindRoom(ctx, filter)
+	if err != nil {
+		log.Println("[AttachToRoom]: unexpected error while finding room")
+		return nil, err
+	}
 
 	log.Println("setting current room active")
-	client.setActiveRoom(room)
+	client.setActiveRoom(foundRoom)
 
-	return room
+	return foundRoom, nil
 }
 
 func (client *Conn) DetachToRoom(rn string){
@@ -202,7 +213,7 @@ func(client *Conn) ReadMessage(ctx context.Context)(error){
 	for{
 		select{
 		case <-ctx.Done():
-			return nil	
+			return fmt.Errorf("[ReadMessage]: context complete: %v", ctx.Err())	
 
 		default: 
 			_,message,err := client.Conn.ReadMessage()
@@ -229,12 +240,15 @@ func(client *Conn) ReadMessage(ctx context.Context)(error){
 func (client *Conn) WriteMessage(ctx context.Context)(error){
 	defer client.Conn.Close()
 
-	client.Conn.SetWriteDeadline(time.Now().Add(writeDeadline))
+	err := client.Conn.SetWriteDeadline(time.Now().Add(writeDeadline))
+	if err != nil {
+		log.Println("could not set write deadline...proceeding with default")
+	}
 
 	for {
 		select{
 		case <-ctx.Done():
-			return nil
+			return fmt.Errorf("[WriteMessage]: context has completed: %v", ctx.Err())
 		default:
 			for message := range client.send {
 

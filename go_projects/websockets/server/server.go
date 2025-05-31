@@ -7,6 +7,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -18,6 +19,14 @@ import (
 
 
 func serverWs(db *mongo.Database, w http.ResponseWriter, r *http.Request) {
+	//recovery function for each client conn when it panics
+	defer func(){
+		if e := recover(); e != nil{
+			log.Printf("[ServerWs]: recovered error: %v",e)
+			http.Error(w,"internal server error", http.StatusInternalServerError)
+		}
+	}()
+
 	ctx, cancel := context.WithCancel(r.Context()) 
 	defer cancel()
 	
@@ -43,7 +52,7 @@ func serverWs(db *mongo.Database, w http.ResponseWriter, r *http.Request) {
 		log.Panicf("error while creating client: %v", err)
 	}
 	//write a message to the user requesting for room name to establish connection to
-	err = newConn.WriteOnceConn([]byte("enter the room name or create one?"))
+	err = newConn.WriteOnceConn([]byte("enter the room id or create one?"))
 	if err != nil {
 		log.Panicf("error while requesting room name: %v", err)
 	}
@@ -53,25 +62,75 @@ func serverWs(db *mongo.Database, w http.ResponseWriter, r *http.Request) {
 		log.Panicf("error while receiving room name: %v", err)
 	}
 
-	rn := string(msg)
+	roomId := string(msg)
+
+	if roomId == "None"{
+		//create a new room
+
+		err = newConn.WriteOnceConn([]byte("enter the room name: "))
+		roomName, err := newConn.ReadOnceConn()
+		if err != nil {
+			log.Panicf("error while receiveing the room name: %v", err)
+		}
+
+		err = newConn.WriteOnceConn([]byte("enter the room description"))
+		desc, err := newConn.ReadOnceConn()
+		if err != nil {
+			log.Panicf("error while receiveing the room description: %v",err)
+		}
+
+		err = newConn.WriteOnceConn([]byte("enter the room max no of conn: default(2)"))
+		maxconn, err := newConn.ReadOnceConn()
+		if err != nil{
+			log.Panicf("error while receiving the room max conns")
+		}
+		txtMaxconn := string(maxconn)
+		numMaxconn, err := strconv.Atoi(txtMaxconn)
+	  if err != nil{ 
+			http.Error(w, "maxconn of type int!!!", http.StatusBadRequest)
+		}	
+
+		err = newConn.WriteOnceConn([]byte("enter whether room is private: default(true)"))
+		isprivate,err := newConn.ReadOnceConn()
+		if err != nil{
+			log.Panicf("error while receiving the room status")
+		}
+		txtIsprivate := string(isprivate)
+		boolIsprivate, err := strconv.ParseBool(txtIsprivate)
+		if err != nil{ 
+			http.Error(w, "isprivate of type bool!!!", http.StatusBadRequest)
+		}	
+
+		room,err := newConn.CreateRoom(string(roomName), string(desc), numMaxconn, boolIsprivate, ctx) 
+		if err != nil{
+			log.Printf("[ServerWs]: error while creating room: %v", err)
+			http.Error(w,"internal server error while creating room.", http.StatusInternalServerError)
+		}
+		log.Printf("[ServerWs]: successfully created the room: %v", room.Id)
+
+		return
+	}
 	//here we have to simulate an input space where the user is allowed to enter the room name
-	room := newConn.AttachToRoom(rn)
+	room,err := newConn.AttachToRoom(roomId, ctx)
 	room.ConnectDb(db)
 
 
 	//create an error group that will sync all the go routines for a client conn
-	group := new(errgroup.Group)
-
+	group,grpCtx := errgroup.WithContext(ctx) 
 	//create new go routines to receive and write data
 	group.Go(func() error {
-		return newConn.ReadMessage(ctx)
+		return newConn.ReadMessage(grpCtx)
 	})
 	group.Go(func() error {
-		return room.Listen(ctx)
+		return room.Listen(grpCtx)
 	})
 	group.Go(func() error {
-		return newConn.WriteMessage(ctx)
+		return newConn.WriteMessage(grpCtx)
 	})
+
+	if err := group.Wait(); err != nil{
+		log.Panicf("client goroutines error: %v\n", err)
+	}
 }
 
 func RunServer() {
