@@ -1,5 +1,4 @@
 go.mod
 go.sum
 .env
-./server/database/**
-
+server/database/**
