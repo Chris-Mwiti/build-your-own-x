@@ -19,14 +19,6 @@ import (
 
 
 func serverWs(db *mongo.Database, w http.ResponseWriter, r *http.Request) {
-	//recovery function for each client conn when it panics
-	defer func(){
-		if e := recover(); e != nil{
-			log.Printf("[ServerWs]: recovered error: %v",e)
-			http.Error(w,"internal server error", http.StatusInternalServerError)
-		}
-	}()
-
 	ctx, cancel := context.WithCancel(r.Context()) 
 	defer cancel()
 	
@@ -66,7 +58,6 @@ func serverWs(db *mongo.Database, w http.ResponseWriter, r *http.Request) {
 
 	if roomId == "None"{
 		//create a new room
-
 		err = newConn.WriteOnceConn([]byte("enter the room name: "))
 		roomName, err := newConn.ReadOnceConn()
 		if err != nil {

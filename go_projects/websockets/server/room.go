@@ -58,7 +58,7 @@ func NewRoom(rn string,description string,maxconn int, isprivate bool) *Room{
 		Id: primitive.NewObjectID(),
 		Name: rn,
 		Description: description,
-		MaxConn: maxconn,
+		MaxConn: maxconn | 2,
 		IsPrivate: isprivate,
 		CreatedAt: time.Now(),
 		db: nil,
@@ -124,7 +124,11 @@ func (room *Room) Listen(ctx context.Context)(error){
 				continue
 			}
 			//update the status of the broadcaster
-			rcvMessage.sender.UpdateConnStatus(Typing)
+			err := rcvMessage.sender.UpdateConnStatus(Typing, ctx)
+			if err != nil {
+				log.Printf("[RoomListen]: error while updating status: %v", err)
+				log.Panic(err)
+			}
 
 			//broadcast to the room users someone is typing
 			for _,client:= range room.Conns{
@@ -138,7 +142,11 @@ func (room *Room) Listen(ctx context.Context)(error){
 				client.send <- rcvMessage.message
 			}
 
-			rcvMessage.sender.UpdateConnStatus(Online)
+			err = rcvMessage.sender.UpdateConnStatus(Online, ctx)
+			if err != nil{
+				log.Printf("[RoomListen]: error while updating status: %v",err)
+				log.Panic(err)
+			}
 
 		//store the newly created user and update the status
 		case client,ok := <-room.register:
@@ -147,7 +155,11 @@ func (room *Room) Listen(ctx context.Context)(error){
 				continue
 			}
 			room.Conns[client.ClientId] = client
-			client.UpdateConnStatus(Online)
+			err := client.UpdateConnStatus(Online,ctx)
+			if err != nil {
+				log.Printf("[RoomListen]: error while updating registering status: %v",err)
+				log.Panic(err)
+			}
 
 		//unregister event listener
 		case client, ok := <-room.unregister:

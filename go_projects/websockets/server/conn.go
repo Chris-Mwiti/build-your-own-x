@@ -73,7 +73,7 @@ func NewConn(conn *websocket.Conn) (*Conn){
 
 func (client *Conn) ConnectDb(db *mongo.Database){
 	log.Println("connection to database")
-	client.Db = db.Collection("clients")
+	client.Db = db.Collection("Clients")
 }
 
 func (client *Conn) DisconnectDb(){
@@ -105,6 +105,10 @@ func (client *Conn) CreateRoom(roomName string, desc string, maxconn int, ispriv
 
 func (client *Conn) AttachToRoom(roomId string, ctx context.Context) (*Room, error){
 	room := new(Room)	
+
+	//@todo: improve the room architecture such that one when a room is initialized
+	//...it does not require to be inputed with the id
+	room.ConnectDb(client.Db.Database())
 
 	//find the room by its id
 	filter := bson.D{bson.E{Key: "room_id", Value: roomId}}
@@ -141,8 +145,17 @@ func (client *Conn) setActiveRoom(room *Room){
 	client.activeRoom = room
 }
 
-func (client *Conn) UpdateConnStatus(s status){
+func (client *Conn) UpdateConnStatus(s status, ctx context.Context)(error){
+	//update the conn status in the model
+	statusFilter := bson.D{bson.E{Key:"status", Value: client.status}}
+	statusUpdate := bson.D{bson.E{Key: "status", Value: s}}
+	_, err := client.UpdateClient(ctx, statusFilter, statusUpdate)
+	if err != nil{
+		log.Println("[UpdateConnStatus]: error while updating status")
+		return err
+	}
 	client.status = s
+	return nil
 }
 
 func (client *Conn) WriteOnceConn(msg []byte) (error) {
@@ -295,7 +308,7 @@ func (client *Conn) Close(ctx context.Context)(error){
 //database operations...
 func (client *Conn) CreateClient(orgCtx context.Context)(*mongo.InsertOneResult, error){
 	log.Println("creating new client connection....")
-	ctx,cancel := context.WithTimeout(orgCtx, time.Second * 3)
+	ctx,cancel := context.WithTimeout(orgCtx, time.Second * 5)
 	defer cancel()
 
 	result, err := client.Db.InsertOne(ctx, client.Serialize())
