@@ -75,7 +75,7 @@ func NewRoom(rn string,description string,maxconn int, isprivate bool) *Room{
 
 func (room *Room) ConnectDb(db *mongo.Database){
 	log.Println("connection room to database")
-	room.db = db.Collection("rooms")
+	room.db = db.Collection("Rooms")
 }
 
 func (room *Room) DisconnectDb() {
@@ -83,11 +83,11 @@ func (room *Room) DisconnectDb() {
 }
 
 func (room *Room) Serialize() (RoomDto){
-	conns := make(map[string]Conn)
+	conns := make(map[string]ClientDto)
 
 	//@todo: refactor and modify the code below to reduce runtime
 	for id, conn := range room.Conns{
-		conns[id] = *conn
+		conns[id] = conn.Serialize()
 	}
 
 	dto := RoomDto{
@@ -191,7 +191,7 @@ func (room *Room) Close(){
 //room model operations
 
 func(room *Room) CreateRoom(orgCtx context.Context)(*mongo.InsertOneResult, error){
-	ctx, cancel := context.WithTimeout(orgCtx, 3 * time.Second)	
+	ctx, cancel := context.WithTimeout(orgCtx, 10 * time.Second)	
 	defer cancel()
 
 	result, err := room.db.InsertOne(ctx, room.Serialize())
@@ -233,7 +233,7 @@ func (room *Room) UpdateRoom(orgCtx context.Context, filter bson.D, update bson.
 func (room *Room) DeleteRoom(orgCtx context.Context, filter bson.D)(*mongo.DeleteResult,error){
 	ctx, cancel := context.WithTimeout(orgCtx, 3 * time.Second)
 	defer cancel()
-
+	defer room.Close()
 	result, err := room.db.DeleteOne(ctx, filter)
 	if err != nil {
 		log.Printf("[DeleteRoom]: error while deleting room of filter: %v", filter)

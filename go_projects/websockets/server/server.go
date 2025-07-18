@@ -103,7 +103,6 @@ func serverWs(db *mongo.Database, w http.ResponseWriter, r *http.Request) {
 	}
 	//here we have to simulate an input space where the user is allowed to enter the room name
 	room,err := newConn.AttachToRoom(roomId, ctx)
-	room.ConnectDb(db)
 
 
 	//create an error group that will sync all the go routines for a client conn
@@ -144,7 +143,7 @@ func RunServer() {
 
 	//create a new mux handler
 	muxHandler := http.NewServeMux()
-	baseCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	baseCtx, cancel := context.WithTimeout(ctx, 30 * time.Second)
 	defer cancel()
 
 	//handlers for the connection

@@ -119,18 +119,20 @@ func (client *Conn) AttachToRoom(roomId string, ctx context.Context) (*Room, err
 	}
 
 	log.Println("setting current room active")
+
+	client.appendRoom(foundRoom)
 	client.setActiveRoom(foundRoom)
 
 	return foundRoom, nil
 }
 
-func (client *Conn) DetachToRoom(rn string){
-	if _,ok := client.Rooms[rn]; !ok{
+func (client *Conn) DetachToRoom(roomId string){
+	if _,ok := client.Rooms[roomId]; !ok{
 		log.Println("room does not exit")
 		return
 	}
 
-	room := client.Rooms[rn]	
+	room := client.Rooms[roomId]	
 	room.unregister <- client
 	client.activeRoom = nil
 }
@@ -170,7 +172,7 @@ func (client *Conn) ReadOnceConn() ([]byte, error) {
 		_,msg,err := client.Conn.ReadMessage()	
 
 		if err != nil{
-			log.Println("could not receive the room name")
+			log.Printf("[ReadOnceConn]: error while receiving msg: %s", err)
 			break
 		}
 
@@ -203,7 +205,7 @@ func (client *Conn) Serialize() (ClientDto){
 		Id: client.Id,
 		ClientId: client.ClientId,
 		Rooms: serRoooms,
-		ActiveRoom: RoomDto{},
+		ActiveRoom: client.activeRoom.Serialize(),
 		Status: string(client.status), 
 	}
 	return dto
@@ -354,6 +356,7 @@ func (client *Conn) UpdateClient(orgCtx context.Context, filter bson.D, update b
 func (client *Conn) DeleteClient(orgCtx context.Context, filter bson.D)(*mongo.DeleteResult, error){
 	ctx, cancel := context.WithTimeout(orgCtx, time.Second * 3)
 	defer cancel()
+	defer client.Close(ctx)
 
 	result, err := client.Db.DeleteOne(ctx, filter)
 	if err != nil {

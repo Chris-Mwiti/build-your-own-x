@@ -1,0 +1,53 @@
+4c06062 | Chris-Mwiti | Mon Jun 2 12:05:31 2025 +0300 | info: as of now i have been able to ask for room credentials...pending to resolve the errors
+35bd8cc | Chris-Mwiti | Mon Jun 2 02:38:10 2025 +0300 | changes: added the controller for room requests and comments to do
+eb322d2 | Chris-Mwiti | Sat May 31 15:01:53 2025 +0300 | changes: added functionality to automatically enable one to create a room
+2f6e0ba | Chris-Mwiti | Sat May 31 14:50:23 2025 +0300 | changes: updated the .gitignore file
+1fdb4fd | Chris-Mwiti | Sat May 31 14:49:10 2025 +0300 | Stop tracking server/database folder
+b0f9cc8 | Chris-Mwiti | Thu May 29 18:15:36 2025 +0300 | modified: the .gitignore file
+ffbc35f | Chris-Mwiti | Thu May 29 18:04:40 2025 +0300 | modified: the .gitignore
+e803082 | Chris-Mwiti | Thu May 29 16:43:27 2025 +0300 | changes: deleted the database files
+a2b878b | Chris-Mwiti | Tue May 27 21:27:53 2025 +0300 | Merge remote-tracking branch 'refs/remotes/origin/main'
+478deb0 | ChrisMwiti | Tue May 27 21:24:49 2025 +0300 | Merge pull request #2 from Chris-Mwiti/Chris-Mwiti-patch-2
+15f3c39 | ChrisMwiti | Tue May 27 21:23:53 2025 +0300 | Delete go_projects/websockets/server/database/mongodb directory
+1e3d2a7 | Chris-Mwiti | Tue May 27 21:20:49 2025 +0300 | changes: deleted the .env file
+dda25d4 | ChrisMwiti | Tue May 27 21:17:32 2025 +0300 | Merge pull request #1 from Chris-Mwiti/Chris-Mwiti-patch-1
+2a22d09 | ChrisMwiti | Tue May 27 21:17:07 2025 +0300 | Delete go_projects/websockets/.env
+115ec4d | Chris-Mwiti | Tue May 27 21:00:19 2025 +0300 | updates: updated the room to have a close func and added errGroup to created go routines
+b8e8afc | Chris-Mwiti | Tue May 27 20:30:32 2025 +0300 | updates: updated the .gitignore file to not expose the ports and database url and log files
+0577e08 | Chris-Mwiti | Tue May 27 20:28:39 2025 +0300 | modifications: added a close method to each conn instance which gives them the ability to close and cancel contexts
+78fc8cb | Chris-Mwiti | Tue May 27 18:58:36 2025 +0300 | changes: in the process of establishing a ctx cancellation for all go routines created
+fccbf19 | Chris-Mwiti | Tue May 27 11:40:15 2025 +0300 | info: success in establishing a operation in the database
+ec04cf9 | Chris-Mwiti | Mon May 26 11:42:29 2025 +0300 | changes: modified the room file to support primitive object types
+ecfd447 | Chris-Mwiti | Mon May 26 11:19:33 2025 +0300 | features: added crud operations to the conn.go file
+e3d533c | Chris-Mwiti | Fri May 23 12:28:41 2025 +0300 | changes: remap of the .gitignore
+bb31aa9 | Chris-Mwiti | Fri May 23 11:55:05 2025 +0300 | Reapply "modifications: remapped the entire project"
+0f9d549 | Chris-Mwiti | Fri May 23 11:47:25 2025 +0300 | Revert "modifications: remapped the entire project"
+2755840 | Chris-Mwiti | Fri May 23 11:39:48 2025 +0300 | modifications: remapped the entire project
+c695ce9 | Chris-Mwiti | Fri May 23 11:05:11 2025 +0300 | changes: removed database from the commit stage
+b79c9cb | ChrisMwiti | Fri May 23 11:03:23 2025 +0300 | Delete go_projects/websockets/server/database directory
+76cffd7 | Chris-Mwiti | Fri May 23 10:58:42 2025 +0300 | changes: established a room connection with the server and tested broadcasting functinality
+325e9b6 | Chris-Mwiti | Thu May 22 14:22:48 2025 +0300 | changes: added serialization method to both room and client conn
+8957128 | Chris-Mwiti | Thu May 22 13:40:14 2025 +0300 | changes: swapped the databse from boltdb to mongodb
+c6b9123 | Chris-Mwiti | Thu May 22 13:35:50 2025 +0300 | changes: swapped the database from boltdb to mongodb
+aff58d4 | Chris-Mwiti | Thu May 22 13:31:22 2025 +0300 | modifications: swapped the db from bolt db to mongo db
+03c8719 | Chris-Mwiti | Wed May 21 13:45:10 2025 +0300 | changes: added the functionality to request room name from the user
+281f17f | Chris-Mwiti | Wed May 21 12:28:59 2025 +0300 | feature: attaching the server to the database
+0169b13 | Chris-Mwiti | Tue May 20 13:35:29 2025 +0300 | changes: added error handling to the conn write
+654cd80 | Chris-Mwiti | Tue May 20 12:17:26 2025 +0300 | changes: modified the initalization of a room: added support for initialization of a new message hub
+84f7bf4 | Chris-Mwiti | Tue May 20 11:31:17 2025 +0300 | changes: added a server to receive the websockets connections
+82b6814 | Chris-Mwiti | Mon May 19 19:34:47 2025 +0300 | rewrite: rewriting the whole app logic to support db storage, tui and a whole bunch of features
+1580628 | Chris-Mwiti | Fri May 16 13:03:16 2025 +0300 | modifications: modified the room listen handle to registering & unregistering of conn
+5574a5b | Chris-Mwiti | Fri May 16 11:48:03 2025 +0300 | changes: modifications to the room methods. attaching to a room and detaching to a room
+9c5702f | Chris-Mwiti | Thu May 15 17:56:37 2025 +0300 | modifications: writing the client write socket method
+29666f4 | Chris-Mwiti | Thu May 15 16:57:01 2025 +0300 | modifications: added the listen method to the chat room
+3f13c66 | Chris-Mwiti | Thu May 15 12:52:05 2025 +0300 | new: Creating a chat room cli app
+90cea70 | Chris-Mwiti | Thu May 15 10:23:29 2025 +0300 | modifications: established the run method of the hub and creation function
+a3ecf94 | Chris-Mwiti | Tue May 13 17:15:45 2025 +0300 | changes: added the changes to the file
+b56c21c | Chris-Mwiti | Sun May 11 17:58:15 2025 +0300 | modification:added the hub functionality
+c7300f3 | Chris-Mwiti | Tue May 6 13:47:58 2025 +0300 | addition: added the write pump that will listen for any messages from the hub to the socket connection addition: added the serveWs that will handle and upgrade http requests to a websocket connections
+a43b680 | Chris-Mwiti | Tue May 6 13:35:47 2025 +0300 | addition: implemented the writepump func for handling writing messages from the hub to the peer
+1feb6e8 | Chris-Mwiti | Tue May 6 13:13:16 2025 +0300 | changes: changes to the underlying client architecture: added support for gorilla websockets
+a59f145 | Chris-Mwiti | Mon May 5 20:05:57 2025 +0300 | info: Learnt about websockets core structure include how to handle frames
+5453a7c | Chris-Mwiti | Mon May 5 17:58:05 2025 +0300 | info: Initialization of the websockets learning directory
+08bc3f7 | Chris-Mwiti | Sat May 3 23:34:02 2025 +0300 | changes: Updated the blockchain to support creation of new chains
+e6bb79e | Chris-Mwiti | Fri May 2 15:18:02 2025 +0300 | changes: Modifications on how to create a chain from a wallet address
