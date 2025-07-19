@@ -2,12 +2,13 @@ package server
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"log"
 	"time"
 
 	uuid "github.com/google/uuid"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
@@ -95,6 +96,22 @@ func (msg *Message) Serialize() (MessageDto) {
 	return serMsg
 }
 
+func (msgHub *MessageHub) Serialize() (MessageHubDto){
+	var serializedMessage []MessageDto
+
+	for _, hub := range msgHub.hub{
+		for _, msg := range hub {
+			serializedMessage = append(serializedMessage, msg.Serialize())
+		}	
+	}
+
+	return MessageHubDto{
+		Id: primitive.NewObjectID(),
+		RoomId: msgHub.RoomId,
+		Messages: serializedMessage,
+	}
+}
+
 func (msgHub *MessageHub) Listen(ctx context.Context) (error) {
 	for {
 		select{
@@ -109,29 +126,33 @@ func (msgHub *MessageHub) Listen(ctx context.Context) (error) {
 	
 }
 
-func (msgHub *MessageHub) StoreMessages(ctx context.Context) (*mongo.InsertOneResult, error){
-	log.Println("Inserting messages to the hub...")
-
-	//serialize all the messages to message dto
-	var serializedMessages []MessageDto
-
-	for key, _:= range msgHub.hub{
-		for _, message := range msgHub.hub[key]{
-			serializedMessages = append(serializedMessages, message.Serialize())
-		}
-	}
-	
-	hub := &MessageHubDto{
-		Id: primitive.NewObjectID(),
-		RoomId: msgHub.RoomId,
-		Messages: serializedMessages,
-	} 
-  result, err := msgHub.coll.InsertOne(ctx, hub)	
-
+func (msgHub *MessageHub) CreateRoomHub(ctx context.Context) (*mongo.InsertOneResult, error){
+	log.Println("Creating room message hub")
+	result, err := msgHub.coll.InsertOne(ctx, msgHub.Serialize())
 	if err != nil {
-		log.Printf("[StoreMessages]: error while storing messages")
+		log.Printf("[CreateRoomHub]: error while creating room hub: %v", err)
 		return nil, err
 	}
+
+	return result, nil
+}	
+
+func (msgHub *MessageHub) InsertMessage(ctx context.Context, msg *messageChannel)(*mongo.UpdateResult, error){
+	log.Println("Inserting message into room hub")
+
+	filter := bson.D{bson.E{Key: "room_id", Value: msgHub.RoomId}}
+	var hub MessageHubDto
+	err := msgHub.coll.FindOne(ctx, filter).Decode(&hub)
+	if err != nil && errors.Is(err,mongo.ErrNoDocuments){
+		//create a new hub for the room	
+		msgHub.CreateRoomHub(ctx)
+	} else {
+		log.Printf("[InsertMessage]: error while inserting message: %v", err)
+		return nil, err	
+	} 
+	
+	update := bson.D{bson.E{Key: "messages", Value: msgHub.Serialize().Messages}}
+	result, err := msgHub.coll.UpdateOne(ctx, filter, update)
 
 	return result, nil
 }
