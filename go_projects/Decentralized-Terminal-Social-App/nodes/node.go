@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -18,7 +19,6 @@ import (
 func Start(logger *zap.SugaredLogger)(host.Host){
 	logger.Infoln("Staring node...")
 	node, err := libp2p.New()
-	defer Close(logger, node)
 
 	if err != nil {
 		logger.Fatalf("Could not be able to start node: %v\n", err)
@@ -33,6 +33,32 @@ func Start(logger *zap.SugaredLogger)(host.Host){
 	addrs, err := peerstore.AddrInfoToP2pAddrs(&hostInfo)
 	if err != nil {
 		logger.Fatalf("Error while creating host addr from info: %s", err.Error())
+	}
+
+	//convert addresses to string format with newline separators
+	addrStrings := make([]string, len(addrs))
+	for i, addr := range addrs {
+		addrStrings[i] = addr.String()
+	}
+
+	addrData := []byte(strings.Join(addrStrings, "\n") + "\n")
+	outputPath := "output/addresses.txt"
+	f, err := os.Create(outputPath)
+	if err != nil {
+		logger.Fatalf("Error while creating address book: %v", err)
+	}
+	defer f.Close()
+
+	//write the addresses to file
+	_, err = f.Write(addrData)
+	if err != nil {
+		logger.Errorf("Error while writing to file: %v", err)
+	}
+
+	//ensure data is flushed to disk
+	err = f.Sync()
+	if err != nil {
+		logger.Fatalf("Error syncing file: %v", err)
 	}
 	logger.Infow("Host Info: ", "Address", addrs, "ID", hostInfo.ID)
 

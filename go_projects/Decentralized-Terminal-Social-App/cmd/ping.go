@@ -23,7 +23,7 @@ var pingCmd = &cobra.Command{
 		_, log := logger.Init()
 		log.Infoln("Ping command called.")
 
-		if len(args) > 0 {
+		if len(args) <= 0 {
 			log.Fatal("Ping command must have atleast one argument(address)")
 		}
 	

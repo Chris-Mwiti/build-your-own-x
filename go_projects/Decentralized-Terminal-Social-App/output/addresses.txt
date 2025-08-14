@@ -1,0 +1,12 @@
+/ip4/127.0.0.1/tcp/33145/p2p/12D3KooWRwcgJTYiZ8BCzz9M68CZZghLz9susfya8VpS22TbiquC
+/ip4/127.0.0.1/udp/35391/quic-v1/webtransport/certhash/uEiC0cVV8Sf09AlxunqK6ISMyz1tXRkICEoo3s2g0vrUmMQ/certhash/uEiDa3hNQWpg7tElSu0JYtpY1xkud7cWmi5_rRUT3nop1Tg/p2p/12D3KooWRwcgJTYiZ8BCzz9M68CZZghLz9susfya8VpS22TbiquC
+/ip4/127.0.0.1/udp/37630/webrtc-direct/certhash/uEiCgtiufUQhOvGqa75BXXjzpKW2czajbeZxvEu239Z0gAA/p2p/12D3KooWRwcgJTYiZ8BCzz9M68CZZghLz9susfya8VpS22TbiquC
+/ip4/127.0.0.1/udp/38580/quic-v1/p2p/12D3KooWRwcgJTYiZ8BCzz9M68CZZghLz9susfya8VpS22TbiquC
+/ip4/192.168.0.107/tcp/33145/p2p/12D3KooWRwcgJTYiZ8BCzz9M68CZZghLz9susfya8VpS22TbiquC
+/ip4/192.168.0.107/udp/35391/quic-v1/webtransport/certhash/uEiC0cVV8Sf09AlxunqK6ISMyz1tXRkICEoo3s2g0vrUmMQ/certhash/uEiDa3hNQWpg7tElSu0JYtpY1xkud7cWmi5_rRUT3nop1Tg/p2p/12D3KooWRwcgJTYiZ8BCzz9M68CZZghLz9susfya8VpS22TbiquC
+/ip4/192.168.0.107/udp/37630/webrtc-direct/certhash/uEiCgtiufUQhOvGqa75BXXjzpKW2czajbeZxvEu239Z0gAA/p2p/12D3KooWRwcgJTYiZ8BCzz9M68CZZghLz9susfya8VpS22TbiquC
+/ip4/192.168.0.107/udp/38580/quic-v1/p2p/12D3KooWRwcgJTYiZ8BCzz9M68CZZghLz9susfya8VpS22TbiquC
+/ip6/::1/tcp/41321/p2p/12D3KooWRwcgJTYiZ8BCzz9M68CZZghLz9susfya8VpS22TbiquC
+/ip6/::1/udp/33949/quic-v1/p2p/12D3KooWRwcgJTYiZ8BCzz9M68CZZghLz9susfya8VpS22TbiquC
+/ip6/::1/udp/39912/quic-v1/webtransport/certhash/uEiC0cVV8Sf09AlxunqK6ISMyz1tXRkICEoo3s2g0vrUmMQ/certhash/uEiDa3hNQWpg7tElSu0JYtpY1xkud7cWmi5_rRUT3nop1Tg/p2p/12D3KooWRwcgJTYiZ8BCzz9M68CZZghLz9susfya8VpS22TbiquC
+/ip6/::1/udp/49963/webrtc-direct/certhash/uEiCgtiufUQhOvGqa75BXXjzpKW2czajbeZxvEu239Z0gAA/p2p/12D3KooWRwcgJTYiZ8BCzz9M68CZZghLz9susfya8VpS22TbiquC
