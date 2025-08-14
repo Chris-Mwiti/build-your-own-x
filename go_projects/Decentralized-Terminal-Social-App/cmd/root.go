@@ -15,13 +15,12 @@ import (
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "ChatX",
-	Short: "A brief description of your application",
-	Long: `A longer description that spans multiple lines and likely contains
-examples and usage of using your application. For example:
+	Short: "Decentralized Peer to Peer Terminal Social Media",
+	Long: `ChatX is a decentralized peer to peer terminal social media application
+	that trys to emulate whatsapp features such as group chatting and status updates
 
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+	The project is used on a basis of learning peer to peer applications and architecture
+	`,
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
 	// Run: func(cmd *cobra.Command, args []string) { },

@@ -18,12 +18,23 @@ import (
 func Start(logger *zap.SugaredLogger)(host.Host){
 	logger.Infoln("Staring node...")
 	node, err := libp2p.New()
+	defer Close(logger, node)
 
 	if err != nil {
 		logger.Fatalf("Could not be able to start node: %v\n", err)
 	}
 
 	logger.Infoln("Node created!")
+	//here lets generate the node info
+	hostInfo := peerstore.AddrInfo{
+		ID: node.ID(),
+		Addrs: node.Addrs(),
+	}
+	addrs, err := peerstore.AddrInfoToP2pAddrs(&hostInfo)
+	if err != nil {
+		logger.Fatalf("Error while creating host addr from info: %s", err.Error())
+	}
+	logger.Infow("Host Info: ", "Address", addrs, "ID", hostInfo.ID)
 
 	return node
 }
@@ -41,52 +52,42 @@ func Close(logger *zap.SugaredLogger, node host.Host){
 
 
 
-func Ping(logger *zap.SugaredLogger, peerAddr string)(error){
+func Ping(logger *zap.SugaredLogger, peerAddrs []string)(error){
 	node := Start(logger)
 	defer Close(logger, node)
-	//here lets generate the node info
-	hostInfo := peerstore.AddrInfo{
-		ID: node.ID(),
-		Addrs: node.Addrs(),
-	}
-	addrs, err := peerstore.AddrInfoToP2pAddrs(&hostInfo)
-	if err != nil {
-		logger.Errorf("Error while creating host addr from info: %s", err.Error())
-		return err
-	}
-	logger.Infow("Host Info: ", "Address", addrs, "ID", hostInfo.ID)
-	
+
 	//configure our own ping protocol
 	pingService := &ping.PingService{Host: node}
 	node.SetStreamHandler(ping.ID, pingService.PingHandler)
 
+	for _, peerAddr := range peerAddrs {
+		//here lets format the input arg to multiaddr 
+		addr, err := multiaddr.NewMultiaddr(peerAddr)
+		if err != nil {
+			logger.Errorf("Error while formating addr format:%s : %s",addr, err.Error())
+			return err
+		}
+		//create a peer info from the addr
+		peer, err := peerstore.AddrInfoFromP2pAddr(addr)
+		if err != nil {
+			logger.Errorf("Error while creating peer info:%s : %s", peer.ID, err.Error())
+			return err
+		}
 
-	//here lets format the input arg to multiaddr 
-	addr, err := multiaddr.NewMultiaddr(peerAddr)
-	if err != nil {
-		logger.Errorf("Error while formating addr format: %s", err.Error())
-		return err
-	}
-	//create a peer info from the addr
-	peer, err := peerstore.AddrInfoFromP2pAddr(addr)
-	if err != nil {
-		logger.Errorf("Error while creating peer info: %s", err.Error())
-		return err
-	}
+		//establish a connection from the host to peer
+		ctx, cancel := context.WithTimeout(context.Background(), 1 * time.Minute)
+		defer cancel()
+		if err := node.Connect(ctx, *peer); err != nil {
+			logger.Errorf("Error while connecting peer %s: ", err.Error())
+			cancel()
+		}
 
-	//establish a connection from the host to peer
-	ctx, cancel := context.WithTimeout(context.Background(), 1 * time.Minute)
-	defer cancel()
-	if err := node.Connect(ctx, *peer); err != nil {
-		logger.Errorf("Error while pinging peer %s: ", err.Error())
-		cancel()
-	}
-
-	//ping to check if there's a connection
-	ch := pingService.Ping(ctx, peer.ID)
-	for i := 0; i < 5; i++ {
-		res := <-ch
-		logger.Infoln("ping response. RTT: ", res.RTT)
+		//ping to check if there's a connection
+		ch := pingService.Ping(ctx, peer.ID)
+		for i := 0; i < 4; i++ {
+			res := <-ch
+			logger.Infoln("ping response. RTT: ", res.RTT)
+		}
 	}
 
 	return nil
@@ -102,5 +103,8 @@ func Listen(logger *zap.SugaredLogger){
 	<-ch
 	logger.Infoln("Received signal shutting down...")
 }
+
+
+
 
 
