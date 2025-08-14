@@ -2,6 +2,9 @@ package nodes
 
 import (
 	"context"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/libp2p/go-libp2p"
@@ -10,7 +13,6 @@ import (
 	"github.com/libp2p/go-libp2p/p2p/protocol/ping"
 	"github.com/multiformats/go-multiaddr"
 	"go.uber.org/zap"
-	"golang.org/x/tools/go/analysis/passes/defers"
 )
 
 func Start(logger *zap.SugaredLogger)(host.Host){
@@ -89,3 +91,16 @@ func Ping(logger *zap.SugaredLogger, peerAddr string)(error){
 
 	return nil
 }
+
+func Listen(logger *zap.SugaredLogger){
+	logger.Infoln("Node listening...")
+	node := Start(logger)
+	defer Close(logger, node)
+
+	ch := make(chan os.Signal, 1)
+	signal.Notify(ch, syscall.SIGINT, syscall.SIGTERM)
+	<-ch
+	logger.Infoln("Received signal shutting down...")
+}
+
+
