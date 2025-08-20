@@ -1,7 +1,12 @@
 package nodes
 
 import (
+	"bufio"
 	"context"
+	"errors"
+	"fmt"
+	"io"
+	"log"
 	"os"
 	"os/signal"
 	"strings"
@@ -10,6 +15,7 @@ import (
 
 	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p/core/host"
+	"github.com/libp2p/go-libp2p/core/network"
 	peerstore "github.com/libp2p/go-libp2p/core/peer"
 	"github.com/libp2p/go-libp2p/p2p/protocol/ping"
 	"github.com/multiformats/go-multiaddr"
@@ -36,6 +42,7 @@ func Start(logger *zap.SugaredLogger)(host.Host){
 	}
 
 	//convert addresses to string format with newline separators
+	//@todo: Add the capability of storing string json formatted syntax to capture and data correctly
 	addrStrings := make([]string, len(addrs))
 	for i, addr := range addrs {
 		addrStrings[i] = addr.String()
@@ -60,7 +67,7 @@ func Start(logger *zap.SugaredLogger)(host.Host){
 	if err != nil {
 		logger.Fatalf("Error syncing file: %v", err)
 	}
-	logger.Infow("Host Info: ", "Address", addrs, "ID", hostInfo.ID)
+	logger.Infow("Host Info: ", "Address", addrStrings, "ID", hostInfo.ID)
 
 	return node
 }
@@ -130,6 +137,51 @@ func Listen(logger *zap.SugaredLogger){
 	logger.Infoln("Received signal shutting down...")
 }
 
+//a handle function to handle read and write streams
+func handleStream(logger *zap.SugaredLogger, stream network.Stream) {
+	logger.Infoln("New stream created")
+
+	rw := bufio.NewReadWriter(bufio.NewReader(stream), bufio.NewWriter(stream))
+
+	//@todo implement the read and write data to stream
+	go readData(rw)
+	go writeData(rw)
+}
+
+func readData(rw *bufio.ReadWriter) (error) {
+	for {
+		str, err := rw.ReadString('\n')
+		if err != nil {
+			return errors.New(fmt.Sprintf("[ReadData]: error while reading data: %v", err.Error()))
+		}
+
+		//here if we have an empty string we just loop out
+		if str == ""{
+			return nil
+		}
+		 
+		if str != "\n"{
+			fmt.Printf("\x1b[32m%s\x1b[0m>", str)
+		} 
+	}
+}
+
+func writeData(rw *bufio.ReadWriter) (error) {
+	reader := bufio.NewReader(os.Stdin)	
+	for {
+		fmt.Print("> ")
+		sendData, err := reader.ReadString('\n')
+		if err != nil {
+			log.Println("Error while reading stream data")
+			return errors.New(fmt.Sprintf("[WriteData]: error while reading data: %v", err.Error()))
+		}
+		_, err = rw.WriteString(sendData)
+		if err != nil {
+			log.Println("Error while writing stream data")
+			return errors.New(fmt.Sprintf("[WriteData]: error while writing data: %v", err.Error()))
+		}
+	}
+}
 
 
 
