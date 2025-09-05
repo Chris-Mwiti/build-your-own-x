@@ -1,7 +1,16 @@
 package task
 
 import (
+	"context"
+	"io"
+	"log"
+	"math"
+	"os"
 	"time"
+
+	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
 	"github.com/google/uuid"
@@ -64,5 +73,91 @@ type Config struct {
 type Docker struct {
 	Client *client.Client
 	Config Config //this field will hold all the configuration of the task 
+}
+
+//this is a wrapper around the most common information that is useful for callers
+type DockerResult struct {
+	Error error
+	Action string //action step being undertaken
+	ContainerId string
+	Result string
+}
+
+
+//pulls images from the imagerepo such as DockerHub
+func (d *Docker) Run() DockerResult{
+	ctx := context.Background()
+	reader, err := d.Client.ImagePull(ctx, d.Config.Image, image.PullOptions{})	
+	if err != nil {
+		log.Printf("Error pulling image %s: %v\n", d.Config.Image, err)
+		return DockerResult{Error: err, Action: "pull", Result: "failed"}
+	}
+
+	//copies the info from the io.ReadCloser to the os.Stdout
+	//@todo: Interface this to charmCli...later on in the future
+	io.Copy(os.Stdout, reader)
+
+	restartPolicy := container.RestartPolicy{
+		Name: container.RestartPolicyMode(d.Config.RestartPolicy),
+	}
+
+	//specifices the amount of resources required by the host machine to run the container
+	resources := container.Resources{
+		Memory: d.Config.Memory, 
+		NanoCPUs: int64(d.Config.Cpu * math.Pow(10,9)),
+	}
+
+	//Specifies the image, env variables and exposedport to run in the container
+	cc := container.Config{
+		Image: d.Config.Image,
+		Tty: false,
+		Env: d.Config.Env,
+		ExposedPorts: d.Config.ExposedPorts,
+	}
+
+	//wrapper of the host configuration
+	hc := container.HostConfig{
+		RestartPolicy: restartPolicy,
+		Resources: resources,
+		PublishAllPorts: true,
+	}
+
+	//create the container with the specified image, and configuration
+	resp, err := d.Client.ContainerCreate(ctx, &cc, &hc, nil, nil, d.Config.Name)
+	if err != nil {
+		log.Printf("Error creating container using image %s: %v\n")
+		return DockerResult{Error: err, Action: "create", Result: "failed"}
+	}
+
+	//start the container
+	err = d.Client.ContainerStart(ctx, resp.ID, container.StartOptions{})
+	if err != nil {
+		log.Printf("Error starting container %s: %v\n", resp.ID, err)
+		return DockerResult{Error: err}
+	}
+
+	//copy the container logs to the stdout
+	d.Config.Runtime.ContainerId = resp.Id
+
+	//gets the container logs dispatched by the container and attaches it to the stdout
+	out, err := d.Client.ContainerLogs(ctx, resp.ID, container.LogsOptions{ShowStdout: true, ShowStderr: true})
+	if err != nil {
+		log.Printf("Error getting logs for container %s: %v\n", resp.ID, err)
+		return DockerResult{Error: err}
+	}
+	
+	multiWriter := io.MultiWriter(os.Stdout, os.Stderr)	
+	//copy the contents of reader to both output
+	_, err = io.Copy(multiWriter, out)
+	if err != nil {
+		log.Printf("Error copying logs to multiple outpts: %v", err)
+		return DockerResult{Error: err}
+	}
+
+	return DockerResult{
+		ContainerId: resp.ID,
+		Action: "start",
+		Result: "success",
+	}
 }
  
