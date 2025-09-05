@@ -11,7 +11,7 @@ import (
 type Manager struct {
 	Pending queue.Queue //role:keeps tracked of submitted tasks
 	TasksDb map[string][]*task.Task //role:keep track of tasks
-	TasksEventDb map[string][]*task.TaskEvent //role:keep track of track events submitted
+	TasksEventDb map[string][]*task.TaskEvent //role:keep track of task events submitted
 	Workers []string //role:store the cluster of workers
 	WorkerTaskMap map[string][]uuid.UUID //role:map workers and their assigned tasks
 	TaskWorkerMap map[uuid.UUID]string //role:map tasks and workers
