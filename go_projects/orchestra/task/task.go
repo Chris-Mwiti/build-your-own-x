@@ -8,7 +8,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/client"
@@ -161,3 +160,29 @@ func (d *Docker) Run() DockerResult{
 	}
 }
  
+func (d *Docker) Stop(containerId string) DockerResult {
+	log.Printf("Attempting to stop container %v", containerId)
+	ctx := context.Background()
+	
+	//stopping the main container Background Process
+	err := d.Client.ContainerStop(ctx, containerId, container.StopOptions{})
+	if err != nil {
+		log.Printf("Error stopping container %s: %v\n", containerId, err)
+		return DockerResult{Error: err, Action: "stopping", Result: "failed"}
+	}
+
+	//here we are removing the container main background process
+	err = d.Client.ContainerRemove(ctx, containerId, container.RemoveOptions{
+		RemoveVolumes: true,
+		RemoveLinks: false,
+		Force: false,
+	})
+	if err != nil {
+		log.Printf("Error removing container %s: %v\n", containerId, err)
+		return DockerResult{Error: err, Action: "removing", Result: "failed"}
+	}
+
+	return DockerResult{Error: err, Action: "stop", Result: "success"}
+
+
+}
