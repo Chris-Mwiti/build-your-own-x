@@ -157,6 +157,7 @@ func (d *Docker) Run() DockerResult{
 		ContainerId: resp.ID,
 		Action: "start",
 		Result: "success",
+		Error: nil,
 	}
 }
  

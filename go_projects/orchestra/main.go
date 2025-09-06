@@ -2,15 +2,57 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/Chris-Mwiti/build-your-own-x/go_projects/orchestra/manager"
 	"github.com/Chris-Mwiti/build-your-own-x/go_projects/orchestra/node"
 	"github.com/Chris-Mwiti/build-your-own-x/go_projects/orchestra/task"
 	"github.com/Chris-Mwiti/build-your-own-x/go_projects/orchestra/worker"
+	"github.com/docker/docker/client"
 	"github.com/golang-collections/collections/queue"
 	"github.com/google/uuid"
 )
+
+func createContainer () (*task.Docker, *task.DockerResult) {
+	c := task.Config{
+		Name: "test-container-w",
+		Image: "postgres",
+		Env: []string{
+			"POSTGRES_USER=cube",
+			"POSTGRES_PASSWORD=secrete",
+		},
+	}
+
+	dc, _ := client.NewClientWithOpts()
+	d := task.Docker{
+		Client: dc,
+		Config: c,
+	}
+	result := d.Run()
+
+	if result.Error != nil {
+		fmt.Printf("%v\n", result.Error)
+		return nil, nil
+	}
+
+	fmt.Printf("Container %s is running with config %v\n", result.ContainerId, c)
+
+	return &d, &result
+}
+
+func stopContainer(d *task.Docker, containerId string) (*task.DockerResult) {
+	result := d.Stop(containerId)
+	if result.Error != nil {
+		log.Printf("Error while stoping container %s: %v\n", containerId, result.Error)
+		return &result
+	}
+
+	log.Printf("Container %s, has been succesfully stoped\n", containerId)
+	return &result
+}
+
+
 
 
 func main(){
