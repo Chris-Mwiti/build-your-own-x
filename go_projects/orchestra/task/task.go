@@ -66,6 +66,8 @@ type Config struct {
 	Disk int64
 	Env []string
 	RestartPolicy string
+	//temporary remember to remove
+	ContainerId string
 }
 
 //Docker struct that will hold the configuration to the Docker client API
@@ -124,7 +126,7 @@ func (d *Docker) Run() DockerResult{
 	//create the container with the specified image, and configuration
 	resp, err := d.Client.ContainerCreate(ctx, &cc, &hc, nil, nil, d.Config.Name)
 	if err != nil {
-		log.Printf("Error creating container using image %s: %v\n")
+		log.Printf("Error creating container using image %s: %v\n", resp.ID, err)
 		return DockerResult{Error: err, Action: "create", Result: "failed"}
 	}
 
@@ -136,7 +138,7 @@ func (d *Docker) Run() DockerResult{
 	}
 
 	//copy the container logs to the stdout
-	d.Config.Runtime.ContainerId = resp.Id
+	d.Config.ContainerId = resp.ID 
 
 	//gets the container logs dispatched by the container and attaches it to the stdout
 	out, err := d.Client.ContainerLogs(ctx, resp.ID, container.LogsOptions{ShowStdout: true, ShowStderr: true})
