@@ -30,6 +30,7 @@ func (worker *Worker) RunTask(){
 //actions: start a task
 func (worker *Worker) StartTask(){
 	fmt.Println("Starting task...")
+
 }
 
 //actions: stop a task
