@@ -3,6 +3,7 @@ package worker
 import (
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/Chris-Mwiti/build-your-own-x/go_projects/orchestra/task"
 	taskModule "github.com/Chris-Mwiti/build-your-own-x/go_projects/orchestra/task"
@@ -37,7 +38,7 @@ func (worker *Worker) StartTask(){
 
 //actions: stop a task
 func (worker *Worker) StopTask(task *taskModule.Task)(task.DockerResult){
-	log.Println("Stoping task...")
+	log.Printf("Stoping task... %s\n", task.ID)
 	taskCfg := taskModule.NewConfig(task) 
 	dockerClient, err:= taskModule.NewDocker(*taskCfg)
 	if err != nil {
@@ -56,12 +57,22 @@ func (worker *Worker) StopTask(task *taskModule.Task)(task.DockerResult){
 
 	result := dockerClient.Stop(dockerClient.Config.ContainerId)
 	if result.Error != nil {
-		log.Printf("error while stoping task")
+		log.Printf("error while stoping container %s: %v\n", result.ContainerId, result.Error)
 		return result
 	}
 
 
-	
+	//here update the state and finish time of the container status
+	task.FinishTime = time.Now()	
+	task.State = taskModule.Completed	
+
+	log.Printf("Succesfully stopped task %s\n", task.ID)
+	return taskModule.DockerResult{
+		Action: "stop_task",
+		Result: "success",
+		ContainerId: result.ContainerId,
+		Error: nil,
+	}
 }
 
 ///session2: Concepts Covered

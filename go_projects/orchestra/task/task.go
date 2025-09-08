@@ -41,7 +41,7 @@ type Task struct {
 	Env string
 	RestartPolicy string //accepts values such as "always", "unless-stopped", "on-failure"
 	StartTime  time.Time
-	Finish time.Time
+	FinishTime time.Time
 }
 
 
