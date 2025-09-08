@@ -33,6 +33,7 @@ type Task struct {
 	Name string
 	State State
 	Image string //represents the docker image,will be used by the scheduler to find a cluster capable of running a task
+	ContainerId string
 	Memory int //resource metric
 	Disk int //resource metric
 	ExposedPorts nat.PortSet //allocation of proper ports for the task
@@ -123,7 +124,7 @@ func (d *Docker) Run() DockerResult{
 	//wrapper of the host configuration
 	hc := container.HostConfig{
 		RestartPolicy: restartPolicy,
-		Resources: resources,
+	 	Resources: resources,
 		PublishAllPorts: true,
 	}
 
@@ -145,6 +146,7 @@ func (d *Docker) Run() DockerResult{
 
 	//copy the container logs to the stdout
 	d.Config.ContainerId = resp.ID 
+	
 
 	//gets the container logs dispatched by the container and attaches it to the stdout
 	log.Println("switching container logs to the os.Stdout & os.Stderr")
@@ -196,3 +198,33 @@ func (d *Docker) Stop(containerId string) DockerResult {
 
 
 }
+
+func NewConfig(t *Task) *Config {
+	//for now we are just dummy typing the config....later on support ui/ux better
+	return &Config{
+		Name: t.Name,	
+		Image: t.Image,
+		RestartPolicy: t.RestartPolicy,
+		ExposedPorts: t.ExposedPorts,
+		//@todo: counter check if the containerId is the same as the Image Id
+	}
+}
+
+func NewDocker(cfg Config) (*Docker, error) {
+	//generate a new client docker request
+	dockerClient, err:= client.NewClientWithOpts()
+	if err != nil {
+		log.Printf("error while creating docker client %v", err)
+		return nil, err
+	}
+	err = client.FromEnv(dockerClient)
+	if err != nil {
+		log.Printf("error while setting env for client conn %v", err)
+		return nil, err
+	}
+
+	return &Docker{
+		Client: dockerClient,
+		Config: cfg,
+	}, nil
+} 

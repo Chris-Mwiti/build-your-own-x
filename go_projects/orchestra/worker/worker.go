@@ -2,8 +2,10 @@ package worker
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/Chris-Mwiti/build-your-own-x/go_projects/orchestra/task"
+	taskModule "github.com/Chris-Mwiti/build-your-own-x/go_projects/orchestra/task"
 	"github.com/golang-collections/collections/queue"
 	"github.com/google/uuid"
 )
@@ -34,8 +36,32 @@ func (worker *Worker) StartTask(){
 }
 
 //actions: stop a task
-func (worker *Worker) StopTask(){
-	fmt.Println("Stoping task...")
+func (worker *Worker) StopTask(task *taskModule.Task)(task.DockerResult){
+	log.Println("Stoping task...")
+	taskCfg := taskModule.NewConfig(task) 
+	dockerClient, err:= taskModule.NewDocker(*taskCfg)
+	if err != nil {
+		log.Panicf("Panicing: Error while starting docker client: %v", err)
+	}
+	
+	if dockerClient.Config.ContainerId == ""{
+		log.Printf("Cannot execute the stop task since the container id is an empty string")
+		return taskModule.DockerResult{
+			Action: "stop_task",
+			Result: "failed:empty_containerId",
+			ContainerId: "",
+			Error: nil,
+		}
+	}
+
+	result := dockerClient.Stop(dockerClient.Config.ContainerId)
+	if result.Error != nil {
+		log.Printf("error while stoping task")
+		return result
+	}
+
+
+	
 }
 
 ///session2: Concepts Covered
