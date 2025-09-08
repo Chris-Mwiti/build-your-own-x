@@ -53,8 +53,10 @@ func (worker *Worker) StartTask(task *taskModule.Task)(task.DockerResult){
 
 
 	log.Println("Running: Completed running task")
-	task.State = taskModule.Completed
+	task.State = taskModule.Runnig
 	worker.Db[task.ID] = task
+	//setting the taskt runtime Id
+	task.ContainerId = result.ContainerId
 	return result
 }
 
