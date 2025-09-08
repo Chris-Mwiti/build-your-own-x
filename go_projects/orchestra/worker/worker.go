@@ -31,9 +31,31 @@ func (worker *Worker) RunTask(){
 }
 
 //actions: start a task
-func (worker *Worker) StartTask(){
-	fmt.Println("Starting task...")
+func (worker *Worker) StartTask(task *taskModule.Task)(task.DockerResult){
+	log.Printf("starting task %s", task.ID)
 
+	//get the config of the task
+	taskCfg := taskModule.NewConfig(task)
+	dockerClient,err := taskModule.NewDocker(*taskCfg)
+	if err != nil {
+		log.Panicf("Panicing: Error while starting docker client %v", err)
+	}
+
+	task.StartTime = time.Now()
+	result := dockerClient.Run()
+
+	if result.Error != nil {
+		log.Printf("error while running task %v", result.Error)
+		task.State = taskModule.Failed
+		worker.Db[task.ID] = task
+		return result
+	}
+
+
+	log.Println("Running: Completed running task")
+	task.State = taskModule.Completed
+	worker.Db[task.ID] = task
+	return result
 }
 
 //actions: stop a task
