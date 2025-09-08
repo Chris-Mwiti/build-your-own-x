@@ -66,6 +66,9 @@ func (worker *Worker) StopTask(task *taskModule.Task)(task.DockerResult){
 	task.FinishTime = time.Now()	
 	task.State = taskModule.Completed	
 
+	//update the workers database to keep track of their states
+	worker.Db[task.ID] = task
+
 	log.Printf("Succesfully stopped task %s\n", task.ID)
 	return taskModule.DockerResult{
 		Action: "stop_task",
