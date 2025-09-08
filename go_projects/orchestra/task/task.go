@@ -96,7 +96,11 @@ func (d *Docker) Run() DockerResult{
 
 	//copies the info from the io.ReadCloser to the os.Stdout
 	//@todo: Interface this to charmCli...later on in the future
-	io.Copy(os.Stdout, reader)
+	_,err = io.Copy(os.Stdout, reader)
+	
+	if err != nil {
+		log.Fatalf("Error copying logs to the stdout")
+	}
 
 	restartPolicy := container.RestartPolicy{
 		Name: container.RestartPolicyMode(d.Config.RestartPolicy),
@@ -124,6 +128,7 @@ func (d *Docker) Run() DockerResult{
 	}
 
 	//create the container with the specified image, and configuration
+	log.Println("creating container start operation...")
 	resp, err := d.Client.ContainerCreate(ctx, &cc, &hc, nil, nil, d.Config.Name)
 	if err != nil {
 		log.Printf("Error creating container using image %s: %v\n", resp.ID, err)
@@ -131,6 +136,7 @@ func (d *Docker) Run() DockerResult{
 	}
 
 	//start the container
+	log.Println("starting container operation...")
 	err = d.Client.ContainerStart(ctx, resp.ID, container.StartOptions{})
 	if err != nil {
 		log.Printf("Error starting container %s: %v\n", resp.ID, err)
@@ -141,6 +147,7 @@ func (d *Docker) Run() DockerResult{
 	d.Config.ContainerId = resp.ID 
 
 	//gets the container logs dispatched by the container and attaches it to the stdout
+	log.Println("switching container logs to the os.Stdout & os.Stderr")
 	out, err := d.Client.ContainerLogs(ctx, resp.ID, container.LogsOptions{ShowStdout: true, ShowStderr: true})
 	if err != nil {
 		log.Printf("Error getting logs for container %s: %v\n", resp.ID, err)

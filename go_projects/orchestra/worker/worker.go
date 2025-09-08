@@ -38,3 +38,9 @@ func (worker *Worker) StopTask(){
 	fmt.Println("Stoping task...")
 }
 
+///session2: Concepts Covered
+//1. Worker Component Purpose
+//2. Define & Implem Algo for Proc Inc tasks
+//3. State machine to Transition tasks Btn State
+
+
