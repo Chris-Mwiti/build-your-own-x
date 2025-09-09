@@ -77,7 +77,7 @@ func (worker *Worker) RunTask() taskModule.DockerResult{
 			result.Error = errors.New("Not supported state transition")
 		}
 	} else {
-		err := fmt.Errorf("Invalid state transition from %s, to %s", taskPersisted.State, taskQueued.State)
+		err := fmt.Errorf("Invalid state transition from %v, to %v", taskPersisted.State, taskQueued.State)
 		result.Error = err
 	}
 
@@ -125,7 +125,7 @@ func (worker *Worker) StopTask(task *taskModule.Task)(taskModule.DockerResult){
 		log.Panicf("Panicing: Error while starting docker client: %v", err)
 	}
 	
-	if dockerClient.Config.ContainerId == ""{
+	if task.ContainerId == ""{
 		log.Printf("Cannot execute the stop task since the container id is an empty string")
 		return taskModule.DockerResult{
 			Action: "stop_task",
@@ -135,7 +135,7 @@ func (worker *Worker) StopTask(task *taskModule.Task)(taskModule.DockerResult){
 		}
 	}
 
-	result := dockerClient.Stop(dockerClient.Config.ContainerId)
+	result := dockerClient.Stop(task.ContainerId)
 	if result.Error != nil {
 		log.Printf("error while stoping container %s: %v\n", result.ContainerId, result.Error)
 		return result
