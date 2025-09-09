@@ -2,10 +2,12 @@ package worker
 
 import (
 	"context"
+	"io"
 	"log"
 	"net/http"
 	"time"
 
+	"github.com/Chris-Mwiti/build-your-own-x/go_projects/orchestra/task"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 )
@@ -45,8 +47,16 @@ func createTaskApi(w http.ResponseWriter, r *http.Request){
 	log.Println("received a create task request")
 }
 func getTaskApi(w http.ResponseWriter, r *http.Request){
-	taskId := chi.URLParam(r, "taskId")
-	log.Printf("received a get task request %s", taskId)
+	log.Println("received a get task request")
+	ctx := r.Context()
+
+	task, ok := ctx.Value("task").(*task.Task)
+	if !ok {
+		http.Error(w, "error while coercing task type", http.StatusInternalServerError)
+		return
+	}
+
+	log.Printf("found task is of image: %s", task.Image)
 }
 
 func putTaskApi(w http.ResponseWriter, r *http.Request){

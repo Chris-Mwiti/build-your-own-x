@@ -168,6 +168,13 @@ func (w *Worker) AddTask(task taskModule.Task) taskModule.DockerResult{
 	}
 }
 
+//dummy prototype of the fetching event
+func FetchTaskDb(taskId string) taskModule.Task {
+	return taskModule.Task{}
+}
+
+ 
+
 ///session2: Concepts Covered
 //1. Worker Component Purpose
 //2. Define & Implem Algo for Proc Inc tasks
