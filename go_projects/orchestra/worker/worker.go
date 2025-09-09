@@ -169,8 +169,8 @@ func (w *Worker) AddTask(task taskModule.Task) taskModule.DockerResult{
 }
 
 //dummy prototype of the fetching event
-func FetchTaskDb(taskId string) taskModule.Task {
-	return taskModule.Task{}
+func FetchTaskDb(taskId string) (taskModule.Task, error) {
+	return taskModule.Task{}, nil
 }
 
  

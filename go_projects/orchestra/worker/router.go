@@ -2,7 +2,6 @@ package worker
 
 import (
 	"context"
-	"io"
 	"log"
 	"net/http"
 	"time"
