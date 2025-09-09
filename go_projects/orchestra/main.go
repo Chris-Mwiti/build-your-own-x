@@ -3,11 +3,13 @@ package main
 import (
 	"fmt"
 	"log"
-	"os"
 	"time"
 
 	"github.com/Chris-Mwiti/build-your-own-x/go_projects/orchestra/task"
+	"github.com/Chris-Mwiti/build-your-own-x/go_projects/orchestra/worker"
 	"github.com/docker/docker/client"
+	"github.com/golang-collections/collections/queue"
+	"github.com/google/uuid"
 )
 
 func createContainer () (*task.Docker, *task.DockerResult) {
@@ -53,21 +55,39 @@ func stopContainer(d *task.Docker, containerId string) (*task.DockerResult) {
 
 func main(){
 	fmt.Println("Upcoming orchestra project")
-
-	fmt.Println("Demo: Creating a container")
-	dockerTask, createResult := createContainer()
-	if createResult.Error != nil {
-		fmt.Printf("%v", createResult.Error)
-		os.Exit(1)
-	}	
 	
-	//simulate a sleep time
-	time.Sleep(2 * time.Second)
-	fmt.Printf("Demo: Stopping container %s\n", createResult.ContainerId)
-
-	deleteResult := stopContainer(dockerTask, createResult.ContainerId)
-	if deleteResult.Error != nil {
-		log.Fatalf("%v\n", deleteResult.Error)
+	workerDb := make(map[uuid.UUID]*task.Task)
+	worker := worker.Worker{
+		Db: workerDb,
+		Queue: *queue.New(),
 	}
-	log.Printf("%v\n", deleteResult)
+
+	//create a demo task
+	tsk := task.Task{
+		ID: uuid.New(),
+		Name: "test-container-2",
+		State: task.Scheduled,
+		Image: "strm/helloworld-http",
+	}
+
+	//it's a silly algorithim...later to be improved in the future
+	log.Println("starting task")
+	worker.AddTask(tsk)
+	result := worker.RunTask()
+	if result.Error != nil {
+		panic(result.Error)
+	}
+
+	log.Printf("task %s is runnig in container %s\n", tsk.ID, tsk.ContainerId)
+	fmt.Println("sleeping mode...")
+	time.Sleep(time.Second * 30)
+
+	log.Printf("stopping task %s\n", tsk.ID)
+	tsk.State = task.Completed
+	worker.AddTask(tsk)
+	result = worker.RunTask()
+	if result.Error != nil {
+		panic(result.Error)
+	}
 }
+
