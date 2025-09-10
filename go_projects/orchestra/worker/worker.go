@@ -12,6 +12,8 @@ import (
 	"github.com/google/uuid"
 )
 
+
+
 //state machine for the task state transition
 var stateTransitionMap = map[taskModule.State][]taskModule.State{
 	taskModule.Pending: {taskModule.Scheduled},
@@ -83,6 +85,7 @@ func (worker *Worker) RunTask() taskModule.DockerResult{
 
 	return result
 }
+
 
 
 //actions: start a task

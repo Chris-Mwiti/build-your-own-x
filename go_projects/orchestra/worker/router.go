@@ -11,6 +11,13 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 )
 
+type WorkerApi struct {
+	Address string
+	Port string
+	Worker *Worker
+	Router *chi.Mux
+}
+
 func router() (*chi.Mux) {
 
 	//create a new instance of the router
