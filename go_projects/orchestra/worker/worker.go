@@ -56,10 +56,21 @@ func (worker *Worker) RunTask() taskModule.DockerResult{
 		log.Println("No tasks in the queue")
 		return taskModule.DockerResult{
 			Error: nil,
+			Action: "worker:dequeue",
+			Result: "nil:dequeue",
 		}
 	}
 	//type assertion from interface to task
-	taskQueued := t.(taskModule.Task)
+	taskQueued, ok := t.(taskModule.Task)
+	
+	if !ok {
+		log.Printf("type coercion failed for queued task")
+		return taskModule.DockerResult{
+			Error: errors.New("error for type coercion failed for queued task"),
+			Action: "coercion",
+			Result: "coercion:failed",
+		}
+	}
 	//fetch the earlier version
 	taskPersisted := worker.Db[taskQueued.ID]
 
@@ -172,7 +183,8 @@ func (w *Worker) AddTask(task taskModule.Task) taskModule.DockerResult{
 }
 
 //dummy prototype of the fetching event
-func FetchTaskDb(taskId string) (taskModule.Task, error) {
+//@todo:implement an algo that wiil be able to conduct a single item search in a queue
+func (w *Worker) FetchTaskDb(taskId string) (taskModule.Task, error) {
 	return taskModule.Task{}, nil
 }
 

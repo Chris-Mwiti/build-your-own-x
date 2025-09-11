@@ -21,10 +21,10 @@ type ErrResponse struct {
 
 //this is an inbuilt middleware that is able to fetch a task on pre-request,
 //and set it up to the request context
-func TaskCtx(next http.Handler) http.Handler {
+func (api *WorkerApi) TaskCtx(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		taskId := chi.URLParam(r, "taskId")
-		task, err := FetchTaskDb(taskId)
+		task, err := api.Worker.FetchTaskDb(taskId)
 		if err != nil {
 			http.Error(w, "could not find the task", http.StatusNotFound)
 			return
@@ -56,9 +56,20 @@ func (api *WorkerApi) CreateTaskApi(w http.ResponseWriter, r *http.Request){
 		//encode the res and send back to the user
 		json.NewEncoder(w).Encode(errRes)
 	}
+
+	//add the task to the worker queue for processing
+
+	api.Worker.AddTask(te.Task)
+	log.Printf("Task added %v", te.Task.ID)
+	w.WriteHeader(http.StatusOK)
+	//@todo:for now we will send back the task created although needs to be updated to be more friendly
+	json.NewEncoder(w).Encode(te.Task)
 }
-func (api *WorkerApi) GetTaskApi(w http.ResponseWriter, r *http.Request){
+func (api *WorkerApi) GetTaskByIdApi(w http.ResponseWriter, r *http.Request){
 	log.Println("received a get task request")
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
 	ctx := r.Context()
 
 	task, ok := ctx.Value("task").(*task.Task)
@@ -68,6 +79,8 @@ func (api *WorkerApi) GetTaskApi(w http.ResponseWriter, r *http.Request){
 	}
 
 	log.Printf("found task is of image: %s", task.Image)
+
+	json.NewEncoder(w).Encode(task)
 }
 
 func (api *WorkerApi) PutTaskApi(w http.ResponseWriter, r *http.Request){
@@ -119,8 +132,8 @@ func Run() {
 		//r.Get("/search", searchTaskApi)
 
 		r.Route("/{taskId}", func(r chi.Router) {
-			r.Use(TaskCtx)
-			r.Get("/", workerApi.GetTaskApi)
+			r.Use(workerApi.TaskCtx)
+			r.Get("/", workerApi.GetTaskByIdApi)
 			r.Put("/", workerApi.PutTaskApi)
 			r.Delete("/", workerApi.DeleteTaskApi)
 		})
