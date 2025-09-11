@@ -24,10 +24,10 @@ func TaskCtx(next http.Handler) http.Handler {
 	})
 }
 
-func createTaskApi(w http.ResponseWriter, r *http.Request){
+func (api *WorkerApi) CreateTaskApi(w http.ResponseWriter, r *http.Request){
 	log.Println("received a create task request")
 }
-func getTaskApi(w http.ResponseWriter, r *http.Request){
+func (api *WorkerApi) GetTaskApi(w http.ResponseWriter, r *http.Request){
 	log.Println("received a get task request")
 	ctx := r.Context()
 
@@ -40,12 +40,12 @@ func getTaskApi(w http.ResponseWriter, r *http.Request){
 	log.Printf("found task is of image: %s", task.Image)
 }
 
-func putTaskApi(w http.ResponseWriter, r *http.Request){
+func (api *WorkerApi) PutTaskApi(w http.ResponseWriter, r *http.Request){
 	taskId := chi.URLParam(r, "taskId")
 	log.Printf("received a put task request %s", taskId)
 }
 
-func deleteTaskApi(w http.ResponseWriter, r *http.Request){
+func (api *WorkerApi) DeleteTaskApi(w http.ResponseWriter, r *http.Request){
 	taskId := chi.URLParam(r, "taskId")
 	log.Printf("receive a delete task request %s", taskId)
 }
@@ -58,7 +58,7 @@ func Run() {
 		r.Get("/", func(w http.ResponseWriter, r *http.Request) {
 			w.Write([]byte("Hello this is the worker api"))
 		})
-		r.Post("/", createTaskApi)
+		r.Post("/", )
 		//@todo: Implement a search api that will be triggered on the name of the image
 		//r.Get("/search", searchTaskApi)
 
