@@ -4,9 +4,13 @@ import (
 	"context"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/Chris-Mwiti/build-your-own-x/go_projects/orchestra/task"
+	"github.com/Chris-Mwiti/build-your-own-x/go_projects/orchestra/worker"
 	"github.com/go-chi/chi/v5"
+	"github.com/golang-collections/collections/queue"
+	"github.com/google/uuid"
 )
 
 //this is an inbuilt middleware that is able to fetch a task on pre-request,
@@ -53,20 +57,46 @@ func (api *WorkerApi) DeleteTaskApi(w http.ResponseWriter, r *http.Request){
 //here we are going to setup the entire path matching for the worker path
 func Run() {
 	wr := router();
+	worker := Worker{
+		Name: "worker-1",
+		Db: make(map[uuid.UUID]*task.Task),
+		Queue: *queue.New(),
+		TaskCount: 0,
+	} 
 
-	wr.Route("/tasks", func(r chi.Router) {
+	taskEvent := task.TaskEvent{
+		ID: uuid.New(),
+		State: task.Runnig,	
+		Timestamp: time.Now(),
+		Task: task.Task{
+			ID: uuid.New(),
+			Name: "test-container-3",
+			State: task.Scheduled,
+			Image: "strm/helloworld-http",
+		},
+	} 
+
+	workerApi := WorkerApi{
+		Address: "http://localhost",
+		Port: "7112",
+		Worker: &worker,
+	  Router: wr,	
+	}
+
+
+	workerApi.Router.Route("/tasks", func(r chi.Router) {
 		r.Get("/", func(w http.ResponseWriter, r *http.Request) {
 			w.Write([]byte("Hello this is the worker api"))
 		})
-		r.Post("/", )
+		r.Post("/", workerApi.CreateTaskApi)
 		//@todo: Implement a search api that will be triggered on the name of the image
 		//r.Get("/search", searchTaskApi)
 
 		r.Route("/{taskId}", func(r chi.Router) {
 			r.Use(TaskCtx)
-			r.Get("/", getTaskApi)
-			r.Put("/", putTaskApi)
-			r.Delete("/", deleteTaskApi)
+			r.Get("/", workerApi.GetTaskApi)
+			r.Put("/", workerApi.PutTaskApi)
+			r.Delete("/", workerApi.DeleteTaskApi)
 		})
 
 	})
