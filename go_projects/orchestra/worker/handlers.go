@@ -2,16 +2,22 @@ package worker
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"time"
 
 	"github.com/Chris-Mwiti/build-your-own-x/go_projects/orchestra/task"
-	"github.com/Chris-Mwiti/build-your-own-x/go_projects/orchestra/worker"
 	"github.com/go-chi/chi/v5"
 	"github.com/golang-collections/collections/queue"
 	"github.com/google/uuid"
 )
+
+type ErrResponse struct {
+	Msg string
+	Status uint
+}
 
 //this is an inbuilt middleware that is able to fetch a task on pre-request,
 //and set it up to the request context
@@ -30,6 +36,26 @@ func TaskCtx(next http.Handler) http.Handler {
 
 func (api *WorkerApi) CreateTaskApi(w http.ResponseWriter, r *http.Request){
 	log.Println("received a create task request")
+
+	decoder := json.NewDecoder(r.Body)
+
+	//here we are disallowing unknow fields from being accepted or decoded
+	decoder.DisallowUnknownFields()
+	te := task.TaskEvent{}
+
+	err := decoder.Decode(&te)
+	if err != nil {
+		errMsg := fmt.Sprintf("error while decoding body %s", err.Error())
+		log.Printf(errMsg)
+	  w.WriteHeader(http.StatusBadRequest)	
+		errRes := ErrResponse{
+			Msg: errMsg,
+			Status: http.StatusBadRequest,
+		}
+
+		//encode the res and send back to the user
+		json.NewEncoder(w).Encode(errRes)
+	}
 }
 func (api *WorkerApi) GetTaskApi(w http.ResponseWriter, r *http.Request){
 	log.Println("received a get task request")
