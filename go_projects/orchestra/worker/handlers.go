@@ -65,6 +65,26 @@ func (api *WorkerApi) CreateTaskApi(w http.ResponseWriter, r *http.Request){
 	//@todo:for now we will send back the task created although needs to be updated to be more friendly
 	json.NewEncoder(w).Encode(te.Task)
 }
+
+func (api *WorkerApi) GetTasks(w http.ResponseWriter, r *http.Request){
+	log.Println("received a fetch all tasks request")
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+
+	tasks, err := api.Worker.FetchTasks()
+	if err != nil {
+		log.Printf("error while fetching tasks %v", err.Error())
+		res := ErrResponse{
+			Msg: fmt.Sprint("error while fetching task"),
+			Status: http.StatusInternalServerError,
+		}
+
+		json.NewEncoder(w).Encode(res)
+	}
+
+	log.Println("fetched tasks from the task database")
+	json.NewEncoder(w).Encode(tasks)
+}
 func (api *WorkerApi) GetTaskByIdApi(w http.ResponseWriter, r *http.Request){
 	log.Println("received a get task request")
 
@@ -91,6 +111,7 @@ func (api *WorkerApi) PutTaskApi(w http.ResponseWriter, r *http.Request){
 func (api *WorkerApi) DeleteTaskApi(w http.ResponseWriter, r *http.Request){
 	taskId := chi.URLParam(r, "taskId")
 	log.Printf("receive a delete task request %s", taskId)
+	
 }
 
 //here we are going to setup the entire path matching for the worker path

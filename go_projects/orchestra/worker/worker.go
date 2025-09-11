@@ -49,7 +49,7 @@ func (worker *Worker) CollectStats(){
 }
 
 //determine the state of a task & actions: start & stop a task based on their state
-func (worker *Worker) RunTask() taskModule.DockerResult{
+func (worker *Worker) Run() taskModule.DockerResult{
 	//here we deque the first task to be uploaded & process
 	t := worker.Queue.Dequeue()
 	if t == nil {
@@ -187,6 +187,19 @@ func (w *Worker) AddTask(task taskModule.Task) taskModule.DockerResult{
 func (w *Worker) FetchTaskDb(taskId string) (taskModule.Task, error) {
 	return taskModule.Task{}, nil
 }
+
+//here for now we are simpling iterating the through an inmemory task db
+//@todo: will implement an inbuilt task database like sqlite an sync online with turso
+func (w *Worker) FetchTasks() ([]taskModule.Task, error) {
+	var tasks []taskModule.Task
+
+	for _, task := range w.Db{
+		tasks = append(tasks, *task)	
+	}
+
+	return tasks, nil
+}
+
 
  
 
