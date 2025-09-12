@@ -73,7 +73,7 @@ func main(){
 	//it's a silly algorithim...later to be improved in the future
 	log.Println("starting task")
 	worker.AddTask(tsk)
-	result := worker.RunTask()
+	result := worker.Run()
 	if result.Error != nil {
 		panic(result.Error)
 	}
