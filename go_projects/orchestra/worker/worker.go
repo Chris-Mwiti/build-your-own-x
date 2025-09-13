@@ -208,11 +208,13 @@ func (w *Worker) FetchTaskDb(taskId string) (taskModule.Task, error) {
 //here for now we are simpling iterating the through an inmemory task db
 //@todo: will implement an inbuilt task database like sqlite an sync online with turso
 func (w *Worker) FetchTasks() ([]taskModule.Task, error) {
+	log.Println("fetching tasks from the datastore")
 	var tasks []taskModule.Task
 
 	for _, task := range w.Db{
 		tasks = append(tasks, *task)	
 	}
+	log.Println(tasks)
 
 	return tasks, nil
 }

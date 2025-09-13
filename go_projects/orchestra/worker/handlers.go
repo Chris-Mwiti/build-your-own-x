@@ -180,6 +180,7 @@ func (api *WorkerApi) initRouter(){
 
 //Start the worker api server
 func (api *WorkerApi) Start(){
+	log.Println("Starting worker server")
 	api.initRouter()
 	err := http.ListenAndServe(fmt.Sprintf("%s:%d", api.Address, api.Port), api.Router)
 	if err != nil {

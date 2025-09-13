@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"strconv"
 
@@ -33,9 +32,11 @@ func main(){
 		Worker: &wrk,
 	}
 
-	//starts the worker http server
-	wrkApi.Start()
 	//listens for incoming or addition of tasks to the queue
 	go wrk.Listen()	
+	//starts the worker http server
+	wrkApi.Start()
+
+
 }
 
