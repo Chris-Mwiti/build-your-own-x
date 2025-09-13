@@ -36,7 +36,5 @@ func main(){
 	go wrk.Listen()	
 	//starts the worker http server
 	wrkApi.Start()
-
-
 }
 
