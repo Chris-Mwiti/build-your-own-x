@@ -8,7 +8,7 @@ import (
 
 type WorkerApi struct {
 	Address string
-	Port string
+	Port int
 	Worker *Worker
 	Router *chi.Mux
 }

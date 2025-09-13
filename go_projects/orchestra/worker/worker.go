@@ -48,6 +48,22 @@ func (worker *Worker) CollectStats(){
 	fmt.Println("Collectiong the task metric")
 }
 
+func (worker *Worker) Listen(){
+	for {
+		if worker.Queue.Len() != 0 {
+			result := worker.Run()
+			if result.Error != nil {
+				log.Printf("error while running task %v", result.Error)
+			}
+		} else {
+			log.Printf("no tasks to process currently\n")
+		}
+		log.Println("sleeping for 15 seconds")
+		time.Sleep(15 * time.Second)
+	}
+
+}
+
 //determine the state of a task & actions: start & stop a task based on their state
 func (worker *Worker) Run() taskModule.DockerResult{
 	//here we deque the first task to be uploaded & process
@@ -80,6 +96,7 @@ func (worker *Worker) Run() taskModule.DockerResult{
 	}
 	var result taskModule.DockerResult
 
+	//@todo: Implement a proper error handling functionality
 	if ValidStateTransition(taskPersisted.State, taskQueued.State){
 		switch taskQueued.State {
 		case taskModule.Scheduled:
@@ -176,7 +193,7 @@ func (worker *Worker) StopTask(task *taskModule.Task)(taskModule.DockerResult){
 func (w *Worker) AddTask(task taskModule.Task) taskModule.DockerResult{
 	w.Queue.Enqueue(task)
 	return taskModule.DockerResult{
-		Action: "TaskAdd",
+		Action: "add_task",
 		Result: "success",
 		Error: nil,
 	}

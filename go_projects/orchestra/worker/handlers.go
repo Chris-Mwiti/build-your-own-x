@@ -12,6 +12,10 @@ import (
 	"github.com/google/uuid"
 )
 
+const (
+	TASK_KEY = "TASK_KEY"
+)
+
 type ErrResponse struct {
 	Msg string
 	Status uint
@@ -28,7 +32,7 @@ func (api *WorkerApi) TaskCtx(next http.Handler) http.Handler {
 			http.Error(w, "Internal Server error",http.StatusInternalServerError)
 			return
 		}
-		ctx := context.WithValue(r.Context(), "task", task)
+		ctx := context.WithValue(r.Context(), TASK_KEY, task)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
@@ -45,7 +49,7 @@ func (api *WorkerApi) CreateTaskApi(w http.ResponseWriter, r *http.Request){
 	err := decoder.Decode(&te)
 	if err != nil {
 		errMsg := fmt.Sprintf("error while decoding body %s", err.Error())
-		log.Printf(errMsg)
+		log.Println(errMsg)
 	  w.WriteHeader(http.StatusBadRequest)	
 		errRes := ErrResponse{
 			Msg: errMsg,
@@ -53,7 +57,11 @@ func (api *WorkerApi) CreateTaskApi(w http.ResponseWriter, r *http.Request){
 		}
 
 		//encode the res and send back to the user
-		json.NewEncoder(w).Encode(errRes)
+		err = json.NewEncoder(w).Encode(errRes)
+		if err != nil {
+			http.Error(w, "Internal Server Error: ", http.StatusInternalServerError)
+			return
+		}
 	}
 
 	//add the task to the worker queue for processing
@@ -62,7 +70,11 @@ func (api *WorkerApi) CreateTaskApi(w http.ResponseWriter, r *http.Request){
 	log.Printf("Task added %v", te.Task.ID)
 	w.WriteHeader(http.StatusOK)
 	//@todo:for now we will send back the task created although needs to be updated to be more friendly
-	json.NewEncoder(w).Encode(te.Task)
+	err = json.NewEncoder(w).Encode(te.Task)
+	if err != nil {
+		http.Error(w, "Internal Server Error: ", http.StatusInternalServerError)
+		return
+	}
 }
 
 func (api *WorkerApi) GetTasks(w http.ResponseWriter, r *http.Request){
@@ -78,11 +90,19 @@ func (api *WorkerApi) GetTasks(w http.ResponseWriter, r *http.Request){
 			Status: http.StatusInternalServerError,
 		}
 
-		json.NewEncoder(w).Encode(res)
+		err = json.NewEncoder(w).Encode(res)
+		if err != nil {
+			http.Error(w, "Internal Server Error: ", http.StatusInternalServerError)
+			return
+		}	
 	}
 
 	log.Println("fetched tasks from the task database")
-	json.NewEncoder(w).Encode(tasks)
+	err = json.NewEncoder(w).Encode(tasks)
+	if err != nil {
+		http.Error(w, "Internal Server Error: ", http.StatusInternalServerError)
+		return
+	}	
 }
 func (api *WorkerApi) GetTaskByIdApi(w http.ResponseWriter, r *http.Request){
 	log.Println("received a get task request")
@@ -98,8 +118,11 @@ func (api *WorkerApi) GetTaskByIdApi(w http.ResponseWriter, r *http.Request){
 	}
 
 	log.Printf("found task is of image: %s", task.Image)
-
-	json.NewEncoder(w).Encode(task)
+	err := json.NewEncoder(w).Encode(task)
+	if err != nil {
+		http.Error(w, "Internal Server Error: ", http.StatusInternalServerError)
+		return
+	}	
 }
 
 func (api *WorkerApi) PutTaskApi(w http.ResponseWriter, r *http.Request){
@@ -134,10 +157,13 @@ func (api *WorkerApi) StopTaskApi(w http.ResponseWriter, r *http.Request){
 
 	log.Printf("task %v has been added to the queue for processing\n", taskId)
 	w.WriteHeader(http.StatusCreated)
-	w.Write([]byte("task has been added to the queue"))
+	_, err := w.Write([]byte("task has been added to the queue"))
+	if err != nil {
+		log.Printf("error while writing back request %v", err)
+	}
 }
 
-//here we are going to setup the entire path matching for the worker path
+//here we are going to setup the entire path matching for the worker tasks path
 func (api *WorkerApi) initRouter(){
 	api.Router = router()
 	api.Router.Route("/tasks", func(r chi.Router) {
@@ -152,7 +178,11 @@ func (api *WorkerApi) initRouter(){
 	
 }
 
+//Start the worker api server
 func (api *WorkerApi) Start(){
 	api.initRouter()
-	http.ListenAndServe(fmt.Sprintf("%s:%d", api.Address, api.Port), api.Router)
+	err := http.ListenAndServe(fmt.Sprintf("%s:%d", api.Address, api.Port), api.Router)
+	if err != nil {
+		log.Panicf("error while starting worker server")
+	}
 }
