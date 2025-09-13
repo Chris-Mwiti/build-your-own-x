@@ -6,11 +6,9 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"time"
 
 	"github.com/Chris-Mwiti/build-your-own-x/go_projects/orchestra/task"
 	"github.com/go-chi/chi/v5"
-	"github.com/golang-collections/collections/queue"
 	"github.com/google/uuid"
 )
 
@@ -26,7 +24,8 @@ func (api *WorkerApi) TaskCtx(next http.Handler) http.Handler {
 		taskId := chi.URLParam(r, "taskId")
 		task, err := api.Worker.FetchTaskDb(taskId)
 		if err != nil {
-			http.Error(w, "could not find the task", http.StatusNotFound)
+			log.Printf("error while fetching task %v\n", err)
+			http.Error(w, "Internal Server error",http.StatusInternalServerError)
 			return
 		}
 		ctx := context.WithValue(r.Context(), "task", task)
@@ -108,58 +107,52 @@ func (api *WorkerApi) PutTaskApi(w http.ResponseWriter, r *http.Request){
 	log.Printf("received a put task request %s", taskId)
 }
 
-func (api *WorkerApi) DeleteTaskApi(w http.ResponseWriter, r *http.Request){
+func (api *WorkerApi) StopTaskApi(w http.ResponseWriter, r *http.Request){
 	taskId := chi.URLParam(r, "taskId")
 	log.Printf("receive a delete task request %s", taskId)
+	if taskId == "" {
+		log.Printf("No taskID passed in request. \n")
+		w.WriteHeader(http.StatusBadRequest)
+	}
+
+	//parse the taskId from a string to a uuid format for retrival
+	tId, _ := uuid.Parse(taskId)
 	
+	//retrival process of the task from the db
+	retriTask, ok := api.Worker.Db[tId]
+
+	if !ok {
+		log.Printf("task item not availble %v\n", tId)
+		w.WriteHeader(http.StatusNotFound)
+		w.Write([]byte("task item not found\n"))
+	}
+
+	//create a copy of the task to add it to the processing task
+	taskCopy := *retriTask
+	taskCopy.State =	task.Completed 
+	api.Worker.AddTask(taskCopy)
+
+	log.Printf("task %v has been added to the queue for processing\n", taskId)
+	w.WriteHeader(http.StatusCreated)
+	w.Write([]byte("task has been added to the queue"))
 }
 
 //here we are going to setup the entire path matching for the worker path
-func Run() {
-	wr := router();
-	worker := Worker{
-		Name: "worker-1",
-		Db: make(map[uuid.UUID]*task.Task),
-		Queue: *queue.New(),
-		TaskCount: 0,
-	} 
-
-	taskEvent := task.TaskEvent{
-		ID: uuid.New(),
-		State: task.Runnig,	
-		Timestamp: time.Now(),
-		Task: task.Task{
-			ID: uuid.New(),
-			Name: "test-container-3",
-			State: task.Scheduled,
-			Image: "strm/helloworld-http",
-		},
-	} 
-
-	workerApi := WorkerApi{
-		Address: "http://localhost",
-		Port: "7112",
-		Worker: &worker,
-	  Router: wr,	
-	}
-
-
-	workerApi.Router.Route("/tasks", func(r chi.Router) {
-		r.Get("/", func(w http.ResponseWriter, r *http.Request) {
-			w.Write([]byte("Hello this is the worker api"))
-		})
-		r.Post("/", workerApi.CreateTaskApi)
-		//@todo: Implement a search api that will be triggered on the name of the image
-		//r.Get("/search", searchTaskApi)
-
+func (api *WorkerApi) initRouter(){
+	api.Router = router()
+	api.Router.Route("/tasks", func(r chi.Router) {
+		r.Post("/", api.CreateTaskApi)
+		r.Get("/", api.GetTasks)
 		r.Route("/{taskId}", func(r chi.Router) {
-			r.Use(workerApi.TaskCtx)
-			r.Get("/", workerApi.GetTaskByIdApi)
-			r.Put("/", workerApi.PutTaskApi)
-			r.Delete("/", workerApi.DeleteTaskApi)
+			r.Use(api.TaskCtx)
+			r.Get("/", api.GetTaskByIdApi)
+			r.Delete("/", api.StopTaskApi)
 		})
-
 	})
+	
 }
 
-
+func (api *WorkerApi) Start(){
+	api.initRouter()
+	http.ListenAndServe(fmt.Sprintf("%s:%d", api.Address, api.Port), api.Router)
+}

@@ -85,7 +85,7 @@ func main(){
 	log.Printf("stopping task %s\n", tsk.ID)
 	tsk.State = task.Completed
 	worker.AddTask(tsk)
-	result = worker.RunTask()
+	result = worker.Run()
 	if result.Error != nil {
 		panic(result.Error)
 	}
