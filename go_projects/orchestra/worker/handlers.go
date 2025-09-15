@@ -9,7 +9,6 @@ import (
 
 	"github.com/Chris-Mwiti/build-your-own-x/go_projects/orchestra/task"
 	"github.com/go-chi/chi/v5"
-	"github.com/google/uuid"
 )
 
 const (
@@ -111,7 +110,7 @@ func (api *WorkerApi) GetTaskByIdApi(w http.ResponseWriter, r *http.Request){
 	w.WriteHeader(http.StatusOK)
 	ctx := r.Context()
 
-	task, ok := ctx.Value("task").(*task.Task)
+	task, ok := ctx.Value(TASK_KEY).(*task.Task)
 	if !ok {
 		http.Error(w, "error while coercing task type", http.StatusInternalServerError)
 		return
@@ -131,31 +130,18 @@ func (api *WorkerApi) PutTaskApi(w http.ResponseWriter, r *http.Request){
 }
 
 func (api *WorkerApi) StopTaskApi(w http.ResponseWriter, r *http.Request){
-	taskId := chi.URLParam(r, "taskId")
-	log.Printf("receive a delete task request %s", taskId)
-	if taskId == "" {
-		log.Printf("No taskID passed in request. \n")
-		w.WriteHeader(http.StatusBadRequest)
-	}
-
-	//parse the taskId from a string to a uuid format for retrival
-	tId, _ := uuid.Parse(taskId)
-	
-	//retrival process of the task from the db
-	retriTask, ok := api.Worker.Db[tId]
-
+	ctx := r.Context()
+	retriTask, ok := ctx.Value(TASK_KEY).(*task.Task)
 	if !ok {
-		log.Printf("task item not availble %v\n", tId)
-		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte("task item not found\n"))
+		http.Error(w, "error while coercing task type", http.StatusInternalServerError)
+		return
 	}
-
-	//create a copy of the task to add it to the processing task
+		//create a copy of the task to add it to the processing task
 	taskCopy := *retriTask
 	taskCopy.State =	task.Completed 
 	api.Worker.AddTask(taskCopy)
 
-	log.Printf("task %v has been added to the queue for processing\n", taskId)
+	log.Printf("task %v has been added to the queue for processing\n", retriTask.ID)
 	w.WriteHeader(http.StatusCreated)
 	_, err := w.Write([]byte("task has been added to the queue"))
 	if err != nil {
