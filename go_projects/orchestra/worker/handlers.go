@@ -3,6 +3,7 @@ package worker
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -26,10 +27,13 @@ func (api *WorkerApi) TaskCtx(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		taskId := chi.URLParam(r, "taskId")
 		task, err := api.Worker.FetchTaskDb(taskId)
-		if err != nil {
+		if  errors.Is(err,errors.New("404_TASK")){
 			log.Printf("error while fetching task %v\n", err)
-			http.Error(w, "Internal Server error",http.StatusInternalServerError)
+			http.Error(w, "Task Not Found",http.StatusNotFound)
 			return
+		} else {
+			log.Printf("internal server [FetchTask] error: %v", err)
+			http.Error(w, "Internal server", http.StatusInternalServerError)
 		}
 		ctx := context.WithValue(r.Context(), TASK_KEY, task)
 		next.ServeHTTP(w, r.WithContext(ctx))

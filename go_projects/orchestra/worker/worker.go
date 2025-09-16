@@ -202,7 +202,7 @@ func (w *Worker) AddTask(task taskModule.Task) taskModule.DockerResult{
 //dummy prototype of the fetching event
 //@todo:implement an algo that wiil be able to conduct a single item search in a queue
 func (w *Worker) FetchTaskDb(taskId string) (*taskModule.Task, error) {
-	log.Println("finding task from the db")
+	log.Println("fetching task from the datastore")
 
 	//1. parse the taskId to uuid format
 	parseId, err := uuid.Parse(taskId)
@@ -215,7 +215,7 @@ func (w *Worker) FetchTaskDb(taskId string) (*taskModule.Task, error) {
 		return task, nil
 	}
 
-	return nil, errors.New("task could not be found")
+	return nil, errors.New("404_TASK")
 }
 
 //here for now we are simpling iterating the through an inmemory task db
