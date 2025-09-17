@@ -27,13 +27,16 @@ func (api *WorkerApi) TaskCtx(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		taskId := chi.URLParam(r, "taskId")
 		task, err := api.Worker.FetchTaskDb(taskId)
-		if  err != nil && errors.Is(err,TASK_404){
-			log.Printf("error while fetching task %v\n", err)
-			http.Error(w, "Task Not Found",http.StatusNotFound)
-			return
-		} else {
-			log.Printf("internal server [FetchTask] error: %v", err)
-			http.Error(w, "Internal server", http.StatusInternalServerError)
+		if err != nil {
+			if errors.Is(err, TASK_404){
+				log.Printf("task not found error %v\n", err)	
+				http.Error(w, "Task Not Found", http.StatusNotFound)
+				return
+			} else {
+				log.Printf("internal server errro while fetching task %v\n", err)
+				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+				return
+			}
 		}
 		ctx := context.WithValue(r.Context(), TASK_KEY, task)
 		next.ServeHTTP(w, r.WithContext(ctx))
