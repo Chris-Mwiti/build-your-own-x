@@ -43,6 +43,18 @@ func (api *WorkerApi) TaskCtx(next http.Handler) http.Handler {
 	})
 }
 
+//fetches the worker stats
+func (api *WorkerApi) GetStats(w http.ResponseWriter, r *http.Request){
+	log.Println("received a get stat request")
+	w.WriteHeader(http.StatusOK)
+	err := json.NewEncoder(w).Encode(api.Worker.Stats)
+	if err != nil {
+		log.Printf("error while enconding struct %v", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+}
+
 func (api *WorkerApi) CreateTaskApi(w http.ResponseWriter, r *http.Request){
 	log.Println("received a create task request")
 
@@ -166,6 +178,11 @@ func (api *WorkerApi) initRouter(){
 			r.Get("/", api.GetTaskByIdApi)
 			r.Delete("/", api.StopTaskApi)
 		})
+	})
+
+	//worker stats route
+	api.Router.Route("/stats", func(r chi.Router) {
+		r.Get("/", api.GetStats)
 	})
 	
 }

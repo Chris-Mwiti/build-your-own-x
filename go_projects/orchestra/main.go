@@ -41,6 +41,8 @@ func main(){
 
 	//listens for incoming or addition of tasks to the queue
 	go wrk.Listen()	
+	//freq collecting stats
+	go wrk.CollectStats()
 	//starts the worker http server
 	wrkApi.Start()
 }
