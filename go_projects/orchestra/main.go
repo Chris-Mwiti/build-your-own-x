@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"strconv"
 
@@ -9,10 +10,16 @@ import (
 	"github.com/Chris-Mwiti/build-your-own-x/go_projects/orchestra/worker"
 	"github.com/golang-collections/collections/queue"
 	"github.com/google/uuid"
+	"github.com/joho/godotenv"
 )
 
 
-
+func init(){
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatalf("error could not fetch .env variables %v\n", err)
+	}
+}
 
 func main(){
 	fmt.Println("Upcoming orchestra project")

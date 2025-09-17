@@ -68,7 +68,6 @@ func (api *WorkerApi) CreateTaskApi(w http.ResponseWriter, r *http.Request){
 	}
 
 	//add the task to the worker queue for processing
-
 	api.Worker.AddTask(te.Task)
 	log.Printf("Task added %v", te.Task.ID)
 	w.WriteHeader(http.StatusOK)
