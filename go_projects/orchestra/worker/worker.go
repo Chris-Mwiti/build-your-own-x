@@ -12,6 +12,8 @@ import (
 	"github.com/google/uuid"
 )
 
+var TASK_404 = errors.New("404_TASK")
+
 
 
 //state machine for the task state transition
@@ -215,7 +217,7 @@ func (w *Worker) FetchTaskDb(taskId string) (*taskModule.Task, error) {
 		return task, nil
 	}
 
-	return nil, errors.New("404_TASK")
+	return nil, TASK_404 
 }
 
 //here for now we are simpling iterating the through an inmemory task db

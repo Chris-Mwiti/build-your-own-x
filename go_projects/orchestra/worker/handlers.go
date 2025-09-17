@@ -27,7 +27,7 @@ func (api *WorkerApi) TaskCtx(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		taskId := chi.URLParam(r, "taskId")
 		task, err := api.Worker.FetchTaskDb(taskId)
-		if  errors.Is(err,errors.New("404_TASK")){
+		if  err != nil && errors.Is(err,TASK_404){
 			log.Printf("error while fetching task %v\n", err)
 			http.Error(w, "Task Not Found",http.StatusNotFound)
 			return
