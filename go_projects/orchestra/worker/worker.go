@@ -41,13 +41,20 @@ type Worker struct {
 	Name string
 	Queue queue.Queue //to keep track of pending tasks
 	Db map[uuid.UUID]*taskModule.Task //store the processed tasks and their states
+	Stats *Stats
 	TaskCount int //count of the tasks assigned to the worker
 }
 
 
 //responsible for collecting the worker metrics
 func (worker *Worker) CollectStats(){
-	fmt.Println("Collectiong the task metric")
+	for {
+		log.Printf("fetching stats for worker %s\n", worker.Name)
+		worker.Stats = GetStats()
+		worker.Stats.TaskCount = worker.TaskCount
+		//simulate a sleep func
+		time.Sleep(15 * time.Second)
+	}
 }
 
 func (worker *Worker) Listen(){

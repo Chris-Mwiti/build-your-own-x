@@ -28,6 +28,7 @@ type Stats struct {
 	DiskStats *linux.Disk
 	CpuStats *linux.CPUStat
 	LoadStats *linux.LoadAvg
+	TaskCount int
 }
 
 //get the total memory of the worker machine
