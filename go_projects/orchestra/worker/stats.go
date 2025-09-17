@@ -1,6 +1,8 @@
 package worker
 
 import (
+	"log"
+
 	"github.com/c9s/goprocinfo/linux"
 )
 
@@ -24,7 +26,7 @@ type CPUStat struct {
 type Stats struct {
 	MemStats *linux.MemInfo
 	DiskStats *linux.Disk
-	CpuStats *CPUStat
+	CpuStats *linux.CPUStat
 	LoadStats *linux.LoadAvg
 }
 
@@ -64,3 +66,53 @@ func (s *Stats) CpuUsage() float64 {
 
 	return (float64(total) - float64(idle)) / float64(total)
 }
+
+//helper functions to fetch stats
+func GetMemoryInfo() *linux.MemInfo {
+	memstats, err := linux.ReadMemInfo("/proc/meminfo")
+	if err != nil {
+		log.Printf("error reading from /proc/meminfo \n")
+		return &linux.MemInfo{}
+	}
+
+	return memstats
+}
+
+func GetDiskStats() *linux.Disk {
+	disk, err := linux.ReadDisk("/")
+	if err != nil {
+		log.Printf("error while reading from / \n")
+		return &linux.Disk{}
+	}
+	return disk
+}
+
+func GetCpuStats() *linux.CPUStat {
+	cpustat, err := linux.ReadStat("/proc/stat")
+	if err != nil {
+		log.Printf("error while getting cpu stats \n")
+		return &linux.CPUStat{}
+	}
+
+	return &cpustat.CPUStatAll
+}
+
+func GetLoadStats() *linux.LoadAvg {
+	loadavg, err := linux.ReadLoadAvg("/proc/loadavg")
+	if err != nil {
+		log.Printf("error while reading form /proc/loadavg")
+		return &linux.LoadAvg{}
+	}
+	return loadavg
+}
+
+func GetStats() *Stats {
+	return &Stats{
+		MemStats: GetMemoryInfo(),
+		DiskStats: GetDiskStats(),
+		CpuStats: GetCpuStats(),
+		LoadStats: GetLoadStats(),
+	}
+}
+
+
