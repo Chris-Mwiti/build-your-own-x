@@ -13,6 +13,7 @@ import (
 )
 
 var TASK_404 = errors.New("404_TASK")
+var COERCION_ERROR = errors.New("COERCION_ERROR")
 
 
 
@@ -91,7 +92,7 @@ func (worker *Worker) Run() taskModule.DockerResult{
 	if !ok {
 		log.Printf("type coercion failed for queued task")
 		return taskModule.DockerResult{
-			Error: errors.New("error for type coercion failed for queued task"),
+			Error: COERCION_ERROR,
 			Action: "coercion",
 			Result: "coercion:failed",
 		}
