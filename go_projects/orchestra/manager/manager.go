@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/Chris-Mwiti/build-your-own-x/go_projects/orchestra/task"
-	"github.com/Chris-Mwiti/build-your-own-x/go_projects/orchestra/worker"
 	"github.com/golang-collections/collections/queue"
 	"github.com/google/uuid"
 )
