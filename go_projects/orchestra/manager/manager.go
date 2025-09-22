@@ -46,7 +46,37 @@ func (manager *Manager) SelectWorker() (string){
 
 //actions: keep track of the resourece stats of the workers
 func (manager *Manager) UpdateTask(){
-	log.Printf("Updating task...how are you feeling with this new keyboard")
+ 
+	for _, w := range manager.Workers {
+		url := fmt.Sprintf("http://%s/tasks", w)
+
+		//@todo: Implement a retry func that will retry failed requests for a number of times
+		resp, err := http.Get(url)
+		if err != nil {
+			log.Printf("error while making get request to url %s: %v\n", url, err)
+		}
+
+		if resp.StatusCode != http.StatusOK {
+			log.Printf("http error: %d\n", resp.StatusCode)
+		}
+
+		var tasks []*task.Task
+
+		//for each task update is status
+		de := json.NewDecoder(resp.Body)
+		err = de.Decode(&tasks)
+		if err != nil {
+			log.Printf("error while decoding worker response")
+		}
+
+		for _, tsk := range tasks{
+			if _, ok := manager.TasksDb[tsk.ID]; !ok{
+				log.Println("task not found")
+				return
+			} 
+			manager.TasksDb[tsk.ID] = tsk
+		}
+	}
 }
 
 //actions: add tasks to the task queue
