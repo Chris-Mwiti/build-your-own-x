@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/Chris-Mwiti/build-your-own-x/go_projects/orchestra/task"
 	"github.com/Chris-Mwiti/build-your-own-x/go_projects/orchestra/worker"
@@ -154,6 +155,14 @@ func (manager *Manager) AddTask(te task.TaskEvent){
 	manager.Pending.Enqueue(te)
 }
 
+func (manager *Manager) ListenToUpdates(){
+	log.Printf("Updating the workers tasks %d\n", len(manager.TasksDb))
+	for {
+		manager.UpdateTask()
+		time.Sleep(15 * time.Second)
+	}
+}
+
 //construction funcion for managers
 func New(workers []string) (*Manager){
 
@@ -163,5 +172,6 @@ func New(workers []string) (*Manager){
 		WorkerTaskMap: make(map[string][]uuid.UUID),
 		TaskWorkerMap: make(map[uuid.UUID]string),
 		Pending: *queue.New(),
+		Workers: workers,
 	}	
 }

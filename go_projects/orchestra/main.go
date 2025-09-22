@@ -6,6 +6,7 @@ import (
 	"os"
 	"strconv"
 
+	"github.com/Chris-Mwiti/build-your-own-x/go_projects/orchestra/manager"
 	"github.com/Chris-Mwiti/build-your-own-x/go_projects/orchestra/task"
 	"github.com/Chris-Mwiti/build-your-own-x/go_projects/orchestra/worker"
 	"github.com/golang-collections/collections/queue"
@@ -44,6 +45,40 @@ func main(){
 	//freq collecting stats
 	go wrk.CollectStats()
 	//starts the worker http server
-	wrkApi.Start()
+	go wrkApi.Start()
+
+
+	wrks := []string{fmt.Sprintf("%s:%d", host, port)} 
+	mg := manager.New(wrks)
+
+	for i := 0; i < 3; i++{
+		tsk := task.Task{
+			ID: uuid.New(),
+			State: task.Scheduled,
+			Name: fmt.Sprintf("test-container-%d", i),
+			Image: "strm/helloworld-http",
+		}
+		te := task.TaskEvent{
+			ID:  uuid.New(),
+			State: task.Runnig,
+			Task: tsk,
+		}
+
+		mg.AddTask(te)
+		err := mg.SendWork()
+		if err != nil {
+			log.Printf("error %v", err)
+			return 
+		}
+	} 
+
+	go mg.ListenToUpdates()
+
+	for { 
+		for _, tsk := range mg.TasksDb {
+			log.Printf("[Manager] Task %s, State %d\n", tsk.ID, tsk.State)
+		}
+	}
+
 }
 
