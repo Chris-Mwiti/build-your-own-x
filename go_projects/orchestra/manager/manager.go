@@ -133,10 +133,10 @@ func (manager *Manager) SendWork() (error){
 		//check the statsu code of the response
 		if resp.StatusCode != http.StatusCreated {
 			log.Printf("response status code: %v\n", resp.StatusCode)	
-			workerResult := worker.ErrResponse{} 
+			var workerResult worker.ErrResponse
 
 			//decode the resp body to the worker result
-			err := json.NewDecoder(resp.Body).Decode(workerResult)
+			err := json.NewDecoder(resp.Body).Decode(&workerResult)
 			if err != nil {
 				log.Printf("error while decoding the response %v\n", err)
 				return errors.New("error while decoding the response")
