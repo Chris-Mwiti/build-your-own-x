@@ -14,6 +14,7 @@ import (
 
 var TASK_404 = errors.New("404_TASK")
 var COERCION_ERROR = errors.New("COERCION_ERROR")
+var TRANSITION_NOT_SUPPORTED = errors.New("TRANSITION_NOT_SUPPORTED")
 
 
 
@@ -58,6 +59,7 @@ func (worker *Worker) CollectStats(){
 	}
 }
 
+//responsible to listen for any incoming task to the queue
 func (worker *Worker) Listen(){
 	for {
 		if worker.Queue.Len() != 0 {
@@ -100,6 +102,7 @@ func (worker *Worker) Run() taskModule.DockerResult{
 	//fetch the earlier version
 	taskPersisted := worker.Db[taskQueued.ID]
 
+	//if the task is not persisted
 	if taskPersisted == nil {
 		taskPersisted = &taskQueued
 		worker.Db[taskQueued.ID] = &taskQueued
@@ -107,6 +110,7 @@ func (worker *Worker) Run() taskModule.DockerResult{
 	var result taskModule.DockerResult
 
 	//@todo: Implement a proper error handling functionality
+	//@todo: Later on in the future we are going to implement support for other transitioins
 	if ValidStateTransition(taskPersisted.State, taskQueued.State){
 		switch taskQueued.State {
 		case taskModule.Scheduled:
@@ -114,7 +118,7 @@ func (worker *Worker) Run() taskModule.DockerResult{
 		case taskModule.Completed:
 			result = worker.StopTask(&taskQueued)
 		default:
-			result.Error = errors.New("Not supported state transition")
+			result.Error = TRANSITION_NOT_SUPPORTED
 		}
 	} else {
 		err := fmt.Errorf("Invalid state transition from %v, to %v", taskPersisted.State, taskQueued.State)

@@ -162,7 +162,7 @@ func (api *WorkerApi) StopTaskApi(w http.ResponseWriter, r *http.Request){
 	log.Printf("task %v has been added to the queue for processing\n", retriTask.ID)
 	w.WriteHeader(http.StatusCreated)
 	_, err := w.Write([]byte("task has been added to the queue"))
-	if err != nil {
+	if err != nil{
 		log.Printf("error while writing back request %v", err)
 	}
 }
