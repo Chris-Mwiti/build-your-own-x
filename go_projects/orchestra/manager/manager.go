@@ -148,3 +148,20 @@ func (manager *Manager) SendWork() (error){
 	log.Printf("No task event in the queue")
 	return nil
 }
+
+func (manager *Manager) AddTask(te task.TaskEvent){
+	//responsible to endquer items to the manager queue
+	manager.Pending.Enqueue(te)
+}
+
+//construction funcion for managers
+func New(workers []string) (*Manager){
+
+	return &Manager{
+		TasksDb: make(map[uuid.UUID]*task.Task),
+		TasksEventDb: make(map[uuid.UUID]*task.TaskEvent),
+		WorkerTaskMap: make(map[string][]uuid.UUID),
+		TaskWorkerMap: make(map[uuid.UUID]string),
+		Pending: *queue.New(),
+	}	
+}
