@@ -10,6 +10,7 @@ import (
 type ManagerApi struct {
 	Address string
 	Port int
+	Router *chi.Mux
 	Manger *Manager
 }
 
