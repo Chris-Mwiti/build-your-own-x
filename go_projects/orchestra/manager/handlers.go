@@ -1,8 +1,8 @@
 package manager
 
 import (
-	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 
@@ -56,3 +56,23 @@ func (api *ManagerApi) StopTaskEvent(w http.ResponseWriter, r *http.Request){
 	
 }
 
+func (api *ManagerApi) initRouter(){
+	api.Router = router()
+
+	api.Router.Route("/manager", func(r chi.Router) {
+		r.Post("/", api.CreateTaskEvent)
+
+		r.Route("/{taskId}", func(r chi.Router) {
+			r.Delete("/", api.StopTaskEvent)
+		})
+	})
+}
+
+func (api *ManagerApi) Start(){
+	log.Println("Starting the manager api server")
+	api.initRouter()
+	err := http.ListenAndServe(fmt.Sprintf("%s:%d", api.Address, api.Port), api.Router)
+	if err != nil {
+		log.Panicf("error while starting manager server: %v", err)
+	}
+}
