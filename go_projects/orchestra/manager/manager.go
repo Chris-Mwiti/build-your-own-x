@@ -15,6 +15,8 @@ import (
 	"github.com/google/uuid"
 )
 
+var ERR_TASK_404 = errors.New("Task not Found")
+
 //info: Defines the Manager Component Structure
 type Manager struct {
 	Pending queue.Queue //role:keeps tracked of submitted tasks
@@ -26,6 +28,7 @@ type Manager struct {
 
 	//implementing a naive scheduling algorithim
 	LastWorker int
+	CurrentWorker string
 }
 
 //actions: Pick the appropriate worker from a pool of workers based on their resource stats
@@ -42,7 +45,8 @@ func (manager *Manager) SelectWorker() (string){
 		manager.LastWorker = 0
 	}
 
-	return manager.Workers[newWorker]
+	manager.CurrentWorker = manager.Workers[newWorker]
+	return manager.CurrentWorker
 }
 
 //actions: keep track of the resourece stats of the workers
@@ -148,6 +152,60 @@ func (manager *Manager) SendWork() (error){
 		}
 	}
 	log.Printf("No task event in the queue")
+	return nil
+}
+
+func (manager *Manager) StopWork(taskId uuid.UUID) (error){
+
+	//fetch and make a copy of the task from the task db
+	tsk, ok := manager.TasksDb[taskId]
+	taskCpy := *tsk
+	//adjust the state of the task to completed
+	taskCpy.State = task.Completed
+	if !ok {
+		log.Println("task not found")
+	}
+	//find which worker is responsible for the assigned task
+	wrk, ok := manager.TaskWorkerMap[taskId]
+	if !ok {
+		return ERR_TASK_404
+	}
+
+	//set the current worker to point the registered worker
+	manager.CurrentWorker = wrk
+	url := fmt.Sprintf("http://%s/tasks",wrk)
+
+	taskEvent := task.TaskEvent{
+		ID: uuid.New(),
+		State: task.Runnig,
+		Task: taskCpy,
+		Timestamp: time.Now(),
+	}
+	
+	data, err := json.Marshal(taskEvent)
+	if err != nil {
+		log.Printf("error while marshaling request %v\n", err)
+		return errors.New("Marshaling error")
+	}
+
+	res, err := http.Post(url, "application/json", bytes.NewBuffer(data))
+
+	if err != nil {
+		log.Printf("error while posting request %v\n", err)
+		return errors.New("Error while posting request")
+	}
+
+	if res.StatusCode != http.StatusCreated {
+		var workerRes worker.ErrResponse
+		log.Printf("post request failed %v\n", res.StatusCode)
+		err := json.NewDecoder(res.Body).Decode(&workerRes)
+		if err != nil {
+			return fmt.Errorf("error while decoding res body %v\n", err)
+		}
+
+		return errors.New(workerRes.Msg) 	
+	}
+
 	return nil
 }
 
