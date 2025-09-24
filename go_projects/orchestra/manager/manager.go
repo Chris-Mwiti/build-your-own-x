@@ -164,15 +164,15 @@ func (manager *Manager) StopWork(taskId uuid.UUID) (error){
 	taskCpy.State = task.Completed
 	if !ok {
 		log.Println("task not found")
-	}
-	//find which worker is responsible for the assigned task
-	wrk, ok := manager.TaskWorkerMap[taskId]
-	if !ok {
 		return ERR_TASK_404
 	}
+	//find which worker is responsible for the assigned task
+	wrk, _:= manager.TaskWorkerMap[taskId]
+	
 
 	//set the current worker to point the registered worker
 	manager.CurrentWorker = wrk
+
 	url := fmt.Sprintf("http://%s/tasks",wrk)
 
 	taskEvent := task.TaskEvent{
@@ -189,7 +189,6 @@ func (manager *Manager) StopWork(taskId uuid.UUID) (error){
 	}
 
 	res, err := http.Post(url, "application/json", bytes.NewBuffer(data))
-
 	if err != nil {
 		log.Printf("error while posting request %v\n", err)
 		return errors.New("Error while posting request")
