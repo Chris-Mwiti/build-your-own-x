@@ -90,12 +90,13 @@ func (manager *Manager) SendWork() (error){
 		//coerce the type to support of type *Task.TaskEvent 
 		taskEvent, ok := item.(task.TaskEvent)
 		if !ok {
-			log.Printf("error while coercing type %v\n", ok)
+			log.Printf("error while coercing type %v\n", !ok)
 			return errors.New("unable to coerce type") 
 		}
 
 		taskItem := taskEvent.Task
-		//select the worker
+		//select the worker using a round robin scheduling algorithim
+		//@todo: later on in the future we are going to improve the algo
 		selecteWorker := manager.SelectWorker()
 
 		//administrative operations
@@ -155,6 +156,8 @@ func (manager *Manager) AddTask(te task.TaskEvent){
 	manager.Pending.Enqueue(te)
 }
 
+//responsible for listening for any updated task state events
+//from listed worker in the worker list
 func (manager *Manager) ListenToUpdates(){
 	log.Printf("Updating the workers tasks %d\n", len(manager.TasksDb))
 	for {
@@ -166,10 +169,16 @@ func (manager *Manager) ListenToUpdates(){
 //construction funcion for managers
 func New(workers []string) (*Manager){
 
+	//preenter the workers mapping to the task
+	workerTaskmap := make(map[string][]uuid.UUID)
+	for _, worker := range workers {
+		workerTaskmap[worker] = []uuid.UUID{}
+	}
+
 	return &Manager{
 		TasksDb: make(map[uuid.UUID]*task.Task),
 		TasksEventDb: make(map[uuid.UUID]*task.TaskEvent),
-		WorkerTaskMap: make(map[string][]uuid.UUID),
+		WorkerTaskMap: workerTaskmap,
 		TaskWorkerMap: make(map[uuid.UUID]string),
 		Pending: *queue.New(),
 		Workers: workers,

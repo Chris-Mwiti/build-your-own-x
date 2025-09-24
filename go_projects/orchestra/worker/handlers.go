@@ -25,7 +25,7 @@ type ErrResponse struct {
 //and set it up to the request context
 func (api *WorkerApi) TaskCtx(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		taskId := chi.URLParam(r, "taskId")
+		taskId := chi.URLParam(r, "taskId") 
 		task, err := api.Worker.FetchTaskDb(taskId)
 		if err != nil {
 			if errors.Is(err, TASK_404){
@@ -85,8 +85,7 @@ func (api *WorkerApi) CreateTaskApi(w http.ResponseWriter, r *http.Request){
 	//add the task to the worker queue for processing
 	api.Worker.AddTask(te.Task)
 	log.Printf("Task added %v", te.Task.ID)
-	w.WriteHeader(http.StatusOK)
-	//@todo:for now we will send back the task created although needs to be updated to be more friendly
+	w.WriteHeader(http.StatusCreated)
 	err = json.NewEncoder(w).Encode(te.Task)
 	if err != nil {
 		http.Error(w, "Internal Server Error: ", http.StatusInternalServerError)

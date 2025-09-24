@@ -68,7 +68,7 @@ func main(){
 		err := mg.SendWork()
 		if err != nil {
 			log.Printf("error %v", err)
-			return 
+			return
 		}
 	} 
 
