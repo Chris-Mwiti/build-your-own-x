@@ -38,7 +38,7 @@ type Task struct {
 	Disk int //resource metric
 	ExposedPorts nat.PortSet //allocation of proper ports for the task
 	PortBindings map[string]string //allcation of proper ports foor the task
-	Env string
+	Env []string
 	RestartPolicy string //accepts values such as "always", "unless-stopped", "on-failure"
 	StartTime  time.Time
 	FinishTime time.Time
@@ -206,6 +206,7 @@ func NewConfig(t *Task) *Config {
 		Image: t.Image,
 		RestartPolicy: t.RestartPolicy,
 		ExposedPorts: t.ExposedPorts,
+		Env: t.Env,
 		//@todo: counter check if the containerId is the same as the Image Id
 	}
 }
