@@ -37,6 +37,8 @@ func (api *ManagerApi) CreateTaskEvent(w http.ResponseWriter, r *http.Request){
 		log.Printf("error while posting task event to worker %s: %v\n", api.Manger.CurrentWorker, err)
 		http.Error(w, "Error while posting task event to worker", http.StatusInternalServerError)
 	}
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(taskEvent.Task)
 }
  
 func (api *ManagerApi) StopTaskEvent(w http.ResponseWriter, r *http.Request){
@@ -53,7 +55,11 @@ func (api *ManagerApi) StopTaskEvent(w http.ResponseWriter, r *http.Request){
 		log.Printf("error while exec stop work func: %v\n", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 	}
-	
+
+	err = json.NewEncoder(w).Encode(taskId)
+	if err != nil{
+		log.Printf("error while encoding data : %v", err)
+	}
 }
 
 func (api *ManagerApi) initRouter(){
