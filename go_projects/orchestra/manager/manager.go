@@ -111,7 +111,7 @@ func (manager *Manager) SendWork() (error){
 		manager.TasksEventDb[taskEvent.ID] = &taskEvent 
 		manager.WorkerTaskMap[selecteWorker] = append(manager.WorkerTaskMap[selecteWorker], taskItem.ID)
 		manager.TaskWorkerMap[taskItem.ID] = selecteWorker
-		 
+
 
 		//adjust the state of the task
 		taskItem.State = task.Scheduled
@@ -126,21 +126,18 @@ func (manager *Manager) SendWork() (error){
 
 		//create a url link to send the request to	
 		url := fmt.Sprintf("http://%s/tasks", selecteWorker)
-		
+
 		//@todo: later on in the future remove this 
 		log.Printf("debugging; generated url (%s)", url)
 
 		resp, err := http.Post(url, "application/json", bytes.NewBuffer(data))
 		if err != nil {
 			log.Printf("error while posting to worker %s: %v\n", url, err)
-
 			//enqueue the faile task for retrial
 			manager.Pending.Enqueue(taskEvent)
-
-			return errors.New("error while posting worker")
+			//check the statsu code of the response
 		}
 
-		//check the statsu code of the response
 		if resp.StatusCode != http.StatusCreated {
 			log.Printf("response status code: %v\n", resp.StatusCode)	
 			var workerResult worker.ErrResponse
@@ -154,13 +151,13 @@ func (manager *Manager) SendWork() (error){
 
 			return errors.New(workerResult.Msg)
 		}
-	}
-	log.Printf("No task event in the queue")
-	return nil
+		return nil
+	} 
+
+	return errors.New("no task in the manager queue")
 }
 
 func (manager *Manager) StopWork(taskId uuid.UUID) (error){
-
 	//fetch and make a copy of the task from the task db
 	tsk, ok := manager.TasksDb[taskId]
 	taskCpy := *tsk
