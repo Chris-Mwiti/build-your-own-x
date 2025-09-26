@@ -50,7 +50,7 @@ func (manager *Manager) SelectWorker() (string){
 }
 
 //actions: keep track of the resourece stats of the workers
-func (manager *Manager) UpdateTask(){
+func (manager *Manager) updateTask()(error){
  
 	for _, w := range manager.Workers {
 		url := fmt.Sprintf("http://%s/tasks", w)
@@ -59,10 +59,12 @@ func (manager *Manager) UpdateTask(){
 		resp, err := http.Get(url)
 		if err != nil {
 			log.Printf("error while making get request to url %s: %v\n", url, err)
+			return err
 		}
 
 		if resp.StatusCode != http.StatusOK {
-			log.Printf("http error: %d\n", resp.StatusCode)
+			log.Printf("http response: %d\n", resp.StatusCode)
+			return nil
 		}
 
 		var tasks []*task.Task
@@ -77,11 +79,13 @@ func (manager *Manager) UpdateTask(){
 		for _, tsk := range tasks{
 			if _, ok := manager.TasksDb[tsk.ID]; !ok{
 				log.Println("task not found")
-				return
+				return errors.New("task does not exist in the manager db")
 			} 
 			manager.TasksDb[tsk.ID] = tsk
 		}
 	}
+
+	return nil
 }
 
 //actions: add tasks to the task queue
@@ -117,7 +121,7 @@ func (manager *Manager) SendWork() (error){
 		data, err := json.Marshal(taskEvent)
 		if err != nil {
 			log.Printf("error while marshing the event request %v\n", err)
-			return errors.New("Marshiling error")	
+			return errors.New("marshiling error")	
 		}
 
 		//create a url link to send the request to	
@@ -208,6 +212,17 @@ func (manager *Manager) StopWork(taskId uuid.UUID) (error){
 	return nil
 }
 
+func (manager *Manager) GetTask(taskId uuid.UUID)(task.Task, error){
+	//retrieve the task from the manager task db
+	tsk, ok := manager.TasksDb[taskId]
+	if !ok {
+		log.Println("task not found")
+		return task.Task{},ERR_TASK_404
+	}
+
+	return *tsk, nil 
+}
+
 func (manager *Manager) AddTask(te task.TaskEvent){
 	//responsible to endquer items to the manager queue
 	manager.Pending.Enqueue(te)
@@ -215,13 +230,29 @@ func (manager *Manager) AddTask(te task.TaskEvent){
 
 //responsible for listening for any updated task state events
 //from listed worker in the worker list
-func (manager *Manager) ListenToUpdates(){
+func (manager *Manager) ListenToUpdates() (error){
 	log.Printf("Updating the workers tasks %d\n", len(manager.TasksDb))
 	for {
-		manager.UpdateTask()
+		if err := manager.updateTask(); err != nil {
+			return err
+		}
 		time.Sleep(15 * time.Second)
 	}
 }
+
+//responsible for listening to any incoming task events req
+func (manager *Manager) Process(){
+	for {
+		log.Println("processing any task in the queue")
+		err := manager.SendWork()
+		if err != nil {
+			//@todo: Implement a retry logic for sending task that fail to execute
+			log.Printf("error while sending work %v\n", err)
+		}
+		time.Sleep(15 * time.Second)
+	}
+}
+
 
 //construction funcion for managers
 func New(workers []string) (*Manager){

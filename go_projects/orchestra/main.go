@@ -24,8 +24,8 @@ func init(){
 
 func main(){
 	fmt.Println("Upcoming orchestra project")
-	host := os.Getenv("BABOSA_HOST")
-	port, _ := strconv.Atoi(os.Getenv("BABOSA_PORT"))
+	wrkshost := os.Getenv("BABOSA_WORKERS_HOST")
+	wrksport, _ := strconv.Atoi(os.Getenv("BABOSA_WORKERS_PORT"))
 	
 	workerDb := make(map[uuid.UUID]*task.Task)
 	wrk := worker.Worker{
@@ -35,8 +35,8 @@ func main(){
 
 
 	wrkApi := worker.WorkerApi{
-		Address: host,
-		Port: port,	
+		Address: wrkshost,
+		Port: wrksport,	
 		Worker: &wrk,
 	}
 
@@ -48,36 +48,26 @@ func main(){
 	go wrkApi.Start()
 
 
-	wrks := []string{fmt.Sprintf("%s:%d", host, port)} 
+
+	wrks := []string{fmt.Sprintf("%s:%d", wrkshost, wrksport)} 
 	mg := manager.New(wrks)
 
-	for i := 0; i < 3; i++{
-		tsk := task.Task{
-			ID: uuid.New(),
-			State: task.Scheduled,
-			Name: fmt.Sprintf("test-container-%d", i),
-			Image: "strm/helloworld-http",
-		}
-		te := task.TaskEvent{
-			ID:  uuid.New(),
-			State: task.Runnig,
-			Task: tsk,
-		}
 
-		mg.AddTask(te)
-		err := mg.SendWork()
-		if err != nil {
-			log.Printf("error %v", err)
-		}
-	} 
-
+	go mg.Process()
 	go mg.ListenToUpdates()
-
-	for { 
-		for _, tsk := range mg.TasksDb {
-			log.Printf("[Manager] Task %s, State %d\n", tsk.ID, tsk.State)
-		}
+	
+	//create a manager api instance
+	mngPort,err := strconv.Atoi(os.Getenv("BABOSA_MANAGER_PORT"))
+	if err != nil {
+		log.Fatalf("port conversion failed")
+	}
+	mngHost := os.Getenv("BABOSA_MANAGER_HOST")
+	mngApi := manager.ManagerApi{
+		Port: mngPort,
+		Address: mngHost,
+		Manger: mg,
 	}
 
+	mngApi.Start()
 }
 

@@ -90,6 +90,12 @@ type DockerResult struct {
 func (d *Docker) Run() DockerResult{
 	ctx := context.Background()
 	reader, err := d.Client.ImagePull(ctx, d.Config.Image, image.PullOptions{})	
+	defer func() {
+		err := reader.Close()
+		if err != nil {
+			log.Fatalf("error while closing image pull reader %v\n",err)
+		}
+	}()
 	if err != nil {
 		log.Printf("Error pulling image %s: %v\n", d.Config.Image, err)
 		return DockerResult{Error: err, Action: "pull", Result: "failed"}

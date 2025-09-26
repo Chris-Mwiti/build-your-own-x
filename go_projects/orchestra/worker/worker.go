@@ -63,7 +63,7 @@ func (worker *Worker) CollectStats(){
 func (worker *Worker) Listen(){
 	for {
 		if worker.Queue.Len() != 0 {
-			result := worker.Run()
+			result := worker.run()
 			if result.Error != nil {
 				log.Printf("error while running task %v", result.Error)
 			}
@@ -77,7 +77,7 @@ func (worker *Worker) Listen(){
 }
 
 //determine the state of a task & actions: start & stop a task based on their state
-func (worker *Worker) Run() taskModule.DockerResult{
+func (worker *Worker) run() taskModule.DockerResult{
 	//here we deque the first task to be uploaded & process
 	t := worker.Queue.Dequeue()
 	if t == nil {
@@ -121,7 +121,7 @@ func (worker *Worker) Run() taskModule.DockerResult{
 			result.Error = TRANSITION_NOT_SUPPORTED
 		}
 	} else {
-		err := fmt.Errorf("Invalid state transition from %v, to %v", taskPersisted.State, taskQueued.State)
+		err := fmt.Errorf("invalid state transition from %v, to %v", taskPersisted.State, taskQueued.State)
 		result.Error = err
 	}
 

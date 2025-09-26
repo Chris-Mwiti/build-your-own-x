@@ -1,7 +1,9 @@
 package manager
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -11,9 +13,30 @@ import (
 	"github.com/google/uuid"
 )
 
-func WorkersCtx(next http.Handler) http.Handler{
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		
+const TASK_KEY = "task"
+
+func (api *ManagerApi) WorkersCtx(next http.Handler) http.Handler{
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {		
+		key := chi.URLParam(r, "taskId")
+		taskId, err := uuid.Parse(key)
+		if err != nil {
+			log.Printf("failed to parse uuid %v\n", err)
+			http.Error(w, "Bad format of task id", http.StatusBadRequest)
+			return
+		}
+		tsk,err := api.Manger.GetTask(taskId)
+		if err != nil {
+			if errors.Is(err, ERR_TASK_404){
+				http.Error(w, "Task not found", http.StatusNotFound)
+				return
+			}
+			log.Printf("error while fetching task %v\n", err)
+			http.Error(w, "Internal server error", http.StatusInternalServerError)
+		}
+	
+		reqCtx := r.Context()
+		ctx := context.WithValue(reqCtx, TASK_KEY, tsk)
+		next.ServeHTTP(w,r.WithContext(ctx))	
 	})
 }
 
@@ -58,9 +81,23 @@ func (api *ManagerApi) StopTaskEvent(w http.ResponseWriter, r *http.Request){
 
 	err = json.NewEncoder(w).Encode(taskId)
 	if err != nil{
-		log.Printf("error while encoding data : %v", err)
+		log.Printf("error while encoding data : %v\n", err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+	}
+	w.WriteHeader(http.StatusAccepted)
+}
+
+func (api *ManagerApi) GetTaskEvent(w http.ResponseWriter, r *http.Request){
+	task := r.Context().Value(TASK_KEY)	
+	
+	w.WriteHeader(http.StatusOK)
+	err := json.NewEncoder(w).Encode(task)
+	if err != nil {
+		log.Printf("err while encoding data: %v\n", err)
+		http.Error(w,"Internal server error", http.StatusInternalServerError)
 	}
 }
+
 
 func (api *ManagerApi) initRouter(){
 	api.Router = router()
@@ -69,6 +106,8 @@ func (api *ManagerApi) initRouter(){
 		r.Post("/", api.CreateTaskEvent)
 
 		r.Route("/{taskId}", func(r chi.Router) {
+			r.Use(api.WorkersCtx)
+			r.Get("/", api.GetTaskEvent)
 			r.Delete("/", api.StopTaskEvent)
 		})
 	})
