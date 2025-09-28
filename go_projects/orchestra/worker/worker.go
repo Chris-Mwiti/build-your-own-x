@@ -1,6 +1,7 @@
 package worker
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log"
@@ -8,6 +9,7 @@ import (
 	"time"
 
 	taskModule "github.com/Chris-Mwiti/build-your-own-x/go_projects/orchestra/task"
+	"github.com/Chris-Mwiti/build-your-own-x/go_projects/orchestra/utils"
 	"github.com/golang-collections/collections/queue"
 	"github.com/google/uuid"
 )
@@ -139,6 +141,35 @@ func (worker *Worker) StartTask(task *taskModule.Task)(taskModule.DockerResult){
 	dockerClient,err := taskModule.NewDocker(*taskCfg)
 	if err != nil {
 		log.Panicf("Panicing: Error while starting docker client %v", err)
+		//attempting to create a simple, reliable retry logic
+		retryFn := func ()(any, error){
+			return taskModule.NewDocker(*taskCfg)
+		}
+		result, done := utils.RetryFn(context.Background(),3,retryFn)	
+
+		//@todo: there might posibly have an error in this implementation
+		select {
+		case res := <- result:
+			switch res.(type){
+			case error :
+				if errors.Is(res.(error), utils.ERR_CTX_DONE) {
+					return taskModule.DockerResult{
+						Action: "retry",
+						Result: "retry:context_done",
+						Error: errors.New("context timeout"),
+					} 
+				} else {
+					log.Printf("an error has occured : %v\n", res)
+				}
+			
+			case *taskModule.Docker:
+				dockerClient = res.(*taskModule.Docker)
+			  break
+			}
+		}
+
+	  <-done
+		time.Sleep(5 * time.Second)
 	}
 
 	task.StartTime = time.Now()

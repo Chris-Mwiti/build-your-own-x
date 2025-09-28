@@ -241,11 +241,10 @@ func (manager *Manager) ListenToUpdates() (error){
 func (manager *Manager) Process(){
 	for {
 		log.Println("processing any task in the queue")
-		err := manager.SendWork()
-		if err != nil {
-			//@todo: Implement a retry logic for sending task that fail to execute
+		//@todo: Implement a retry logic implementation of the utility
+		if err := manager.SendWork(); err != nil {
 			log.Printf("error while sending work %v\n", err)
-		}
+		}	
 		time.Sleep(15 * time.Second)
 	}
 }
