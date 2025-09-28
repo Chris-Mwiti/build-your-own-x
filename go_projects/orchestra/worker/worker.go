@@ -152,7 +152,9 @@ func (worker *Worker) StartTask(task *taskModule.Task)(taskModule.DockerResult){
 		enhDockerClient := func (ctx context.Context)(taskModule.DockerResult, error){
 			if err := ctx.Err(); err != nil{
 				log.Println("wrapper func: context done")
-				return taskModule.DockerResult{}, nil
+				return taskModule.DockerResult{
+					Error: err,
+				}, nil
 			}	
 			return dockerClient.Run(), nil
 		}

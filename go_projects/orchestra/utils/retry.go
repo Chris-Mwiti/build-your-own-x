@@ -10,6 +10,8 @@ import (
 )
 
 var ERR_CTX_DONE = errors.New("context done.")
+
+//used to retry functionalities for a number of counts
 func RetryFn[T any](parentCtx context.Context, count int, initialBackOff time.Duration, fn func(context.Context) (T, error)) (T, error){
 	if count <= 0 {
 		count = 1
