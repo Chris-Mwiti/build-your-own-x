@@ -47,6 +47,7 @@ func (api *WorkerApi) TaskCtx(next http.Handler) http.Handler {
 func (api *WorkerApi) GetStats(w http.ResponseWriter, r *http.Request){
 	log.Println("received a get stat request")
 	w.WriteHeader(http.StatusOK)
+	w.Header().Set("Content-Type", "application/json")
 	err := json.NewEncoder(w).Encode(api.Worker.Stats)
 	if err != nil {
 		log.Printf("error while enconding struct %v", err)

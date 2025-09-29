@@ -93,7 +93,7 @@ func (d *Docker) Run() DockerResult{
 	defer func() {
 		err := reader.Close()
 		if err != nil {
-			log.Fatalf("error while closing image pull reader %v\n",err)
+			log.Panicf("error while closing image pull reader %v\n",err)
 		}
 	}()
 	if err != nil {
