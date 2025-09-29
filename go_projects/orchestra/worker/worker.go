@@ -120,6 +120,8 @@ func (worker *Worker) run() taskModule.DockerResult{
 			result = worker.StartTask(&taskQueued)
 		case taskModule.Completed:
 			result = worker.StopTask(&taskQueued)
+		case taskModule.Failed:
+			result = worker.RestartTask(&taskQueued)
 		default:
 			result.Error = TRANSITION_NOT_SUPPORTED
 		}
@@ -289,6 +291,37 @@ func (w *Worker) inspectTask(task *taskModule.Task) taskModule.DockerInspectResu
 	}
 
 	return dockerClient.Inspect(task.ContainerId)
+}
+
+func (w *Worker) updateTasks() (error) {
+	for id, task := range w.Db {
+		//here we will check if the task state is Running
+		//and if so get insights and health check about it
+		resp := w.inspectTask(task)
+		
+		if resp.Error != nil {
+			log.Printf("error while inspecting container %v\n", resp.Error)
+			return fmt.Errorf("error while inspecting container %v\n", resp.Error)
+		}
+
+		//if the container is nil then it means it has already failed
+		if resp.Container == nil {
+			log.Printf("container for task %s in non-runnig state %s\n", task.ID, task.State)
+			//update the state of task in the db to point to failing
+			w.Db[id].State = taskModule.Failed
+			return nil
+		}
+
+		//the container has already existed so the state of the task is failed
+		if resp.Container.State.Status == "exited" {
+			log.Printf("container for task %s in non-running state %s\n", id, task.State)
+			w.Db[id].State = taskModule.Failed
+		}
+
+		w.Db[id].PortBindings = resp.Container.NetworkSettings.NetworkSettingsBase.Ports
+	}	
+
+	return nil
 }
 
 

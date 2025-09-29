@@ -8,7 +8,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/client"
@@ -38,7 +37,7 @@ type Task struct {
 	Memory int //resource metric
 	Disk int //resource metric
 	ExposedPorts nat.PortSet //allocation of proper ports for the task
-	PortBindings map[string]string //allcation of proper ports foor the task
+	PortBindings nat.PortMap //allcation of proper ports foor the task
 	Env []string
 	RestartPolicy string //accepts values such as "always", "unless-stopped", "on-failure"
 	StartTime  time.Time
@@ -211,6 +210,7 @@ func (d *Docker) Stop(containerId string) DockerResult {
 
 }
 
+//used to provide insights and status updates for the container
 func (d *Docker) Inspect(containerId string) DockerInspectResult {
 	log.Printf("Attempting to inspect container %s\n", containerId)
 	ctx := context.Background()
