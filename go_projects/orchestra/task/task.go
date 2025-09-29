@@ -8,6 +8,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/client"
@@ -67,7 +68,7 @@ type Config struct {
 	Disk int64
 	Env []string
 	RestartPolicy string
-	//temporary remember to remove
+	//@todo:temporary remember to remove
 	ContainerId string
 }
 
@@ -83,6 +84,11 @@ type DockerResult struct {
 	Action string //action step being undertaken
 	ContainerId string
 	Result string
+}
+
+type DockerInspectResult struct {
+	Error error
+	Container *container.InspectResponse 
 }
 
 
@@ -203,6 +209,19 @@ func (d *Docker) Stop(containerId string) DockerResult {
 	return DockerResult{Error: err, Action: "stop", Result: "success"}
 
 
+}
+
+func (d *Docker) Inspect(containerId string) DockerInspectResult {
+	log.Printf("Attempting to inspect container %s\n", containerId)
+	ctx := context.Background()
+
+	result, err := d.Client.ContainerInspect(ctx, containerId)
+	if err != nil {
+		log.Printf("error has occured while executing the inspect container func %v\n", err)
+		return DockerInspectResult{Error: err}
+	}
+
+	return DockerInspectResult{Container: &result}
 }
 
 func NewConfig(t *Task) *Config {
