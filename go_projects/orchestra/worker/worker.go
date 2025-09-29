@@ -17,6 +17,7 @@ import (
 var TASK_404 = errors.New("404_TASK")
 var COERCION_ERROR = errors.New("COERCION_ERROR")
 var TRANSITION_NOT_SUPPORTED = errors.New("TRANSITION_NOT_SUPPORTED")
+var ERR_FUNC_EXEC = errors.New("func execution error")
 
 
 
@@ -263,7 +264,21 @@ func (w *Worker) FetchTasks() ([]taskModule.Task, error) {
 	return tasks, nil
 }
 
-func (w *Worker) InspectTask(task *taskModule.Task) taskModule.DockerInspectResult{
+func (w *Worker) ListenUpdateTasks() (error) {
+	for {
+		log.Println("listening to update tasks events")
+		err := w.updateTasks()
+
+		if err != nil {
+			log.Printf("error while listening to update tasks events: %v\n", err)
+			return ERR_FUNC_EXEC 
+		}
+		log.Printf("sleeping for 15 seconds")
+		time.Sleep(15 * time.Second)
+	}
+}
+
+func (w *Worker) inspectTask(task *taskModule.Task) taskModule.DockerInspectResult{
 	config := taskModule.NewConfig(task)
 	dockerClient, err := taskModule.NewDocker(*config)
 	if err != nil {
@@ -275,6 +290,8 @@ func (w *Worker) InspectTask(task *taskModule.Task) taskModule.DockerInspectResu
 
 	return dockerClient.Inspect(task.ContainerId)
 }
+
+
 
 
  
