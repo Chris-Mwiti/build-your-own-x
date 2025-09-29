@@ -263,12 +263,20 @@ func (w *Worker) FetchTasks() ([]taskModule.Task, error) {
 	return tasks, nil
 }
 
+func (w *Worker) InspectTask(task *taskModule.Task) taskModule.DockerInspectResult{
+	config := taskModule.NewConfig(task)
+	dockerClient, err := taskModule.NewDocker(*config)
+	if err != nil {
+		log.Printf("error while configuring new docker client %v\n", err)
+		return taskModule.DockerInspectResult{
+			Error: err,
+		}
+	}
+
+	return dockerClient.Inspect(task.ContainerId)
+}
+
 
  
-
-///session2: Concepts Covered
-//1. Worker Component Purpose
-//2. Define & Implem Algo for Proc Inc tasks
-//3. State machine to Transition tasks Btn State
 
 
