@@ -42,6 +42,10 @@ type Task struct {
 	RestartPolicy string //accepts values such as "always", "unless-stopped", "on-failure"
 	StartTime  time.Time
 	FinishTime time.Time
+
+	//health check attributes
+	HealthCheck string
+	RestartCount int
 }
 
 
