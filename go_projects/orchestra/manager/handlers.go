@@ -55,6 +55,9 @@ func (api *ManagerApi) CreateTaskEvent(w http.ResponseWriter, r *http.Request){
 
 	//invoke the manager api event	
 	api.Manger.AddTask(taskEvent)
+
+	//just a funny thing that I am recognizing...what about when a diff go routine is also sending a work....
+	//will possible need a way to lock and send a lock to the next receiver.
 	err = api.Manger.SendWork()
 	if err != nil {
 		log.Printf("error while posting task event to worker %s: %v\n", api.Manger.CurrentWorker, err)
