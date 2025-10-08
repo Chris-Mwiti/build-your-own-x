@@ -12,6 +12,7 @@ import (
 
 	"github.com/Chris-Mwiti/build-your-own-x/go_projects/orchestra/task"
 	"github.com/Chris-Mwiti/build-your-own-x/go_projects/orchestra/worker"
+	"github.com/docker/go-connections/nat"
 	"github.com/golang-collections/collections/queue"
 	"github.com/google/uuid"
 )
@@ -250,6 +251,7 @@ func (manager *Manager) Process(){
 	}
 }
 
+//checks the health of a task by making a request to the worker it is running on 
 func (manager *Manager) checkTaskHealth(task task.Task)(error){
 	log.Printf("Checking the task %v health : %s\n", task.ID, task.HealthCheck)
 	w := manager.TaskWorkerMap[task.ID]
@@ -257,8 +259,32 @@ func (manager *Manager) checkTaskHealth(task task.Task)(error){
 	hostport := getHostPort(task.PortBindings)
 	wrk := strings.Split(w, ":")
 	url := fmt.Sprintf("http://%s:%s%s", wrk[0], *hostport, task.HealthCheck)
-	log.Printf("Calling health")
+	log.Printf("Calling health check for task")
 
+	res, err := http.Get(url)
+	if err != nil {
+		log.Printf("error while making a request to task health check %v\n",err)
+		return err
+	}
+
+	if res.StatusCode != http.StatusOK {
+		err := fmt.Sprintf("error, health check for task %v has failed %d\n", task.ID, res.StatusCode)
+		log.Println(err)
+		return errors.New(err)
+	}
+
+	log.Printf("Task health for %v is %d\n",task.ID, res.StatusCode)
+
+	return nil
+}
+
+
+//used to get the host port of the worker the task is running on
+func getHostPort(ports nat.PortMap) *string {
+	for k, _ := range ports {
+		return &ports[k][0].HostPort
+	}
+	return nil
 }
 
 

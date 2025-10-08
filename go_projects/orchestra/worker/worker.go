@@ -133,6 +133,31 @@ func (worker *Worker) run() taskModule.DockerResult{
 	return result
 }
 
+func (worker *Worker) RestartTask(task *taskModule.Task)(taskModule.DockerResult){
+	log.Printf("restartin task %v\n", task.ID)
+	_,err := utils.RetryFn(context.Background(), 3, 5 * time.Second, func(ctx context.Context) (*taskModule.Task, error) {
+		tsk := worker.AddTask(*task)
+		
+		if tsk.Error != nil {
+			log.Printf("error while adding task to worker queue")
+			return nil, tsk.Error
+		}
+		result := worker.run()
+	
+		if result.Error != nil {
+			log.Printf("error while re running task %v\n", task.ID)
+			return nil, result.Error
+		}
+		
+		return task, nil
+	})  
+
+	if err != nil{
+		log.Printf("error while retrying to restart task %v\n", err)
+	}
+
+}
+
 
 
 //actions: start a task
