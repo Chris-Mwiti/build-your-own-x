@@ -154,8 +154,20 @@ func (worker *Worker) RestartTask(task *taskModule.Task)(taskModule.DockerResult
 
 	if err != nil{
 		log.Printf("error while retrying to restart task %v\n", err)
-	}
 
+		return taskModule.DockerResult{
+			Error: err,
+			Action: "restart",
+			Result: "restart:failed",
+		}
+	}
+	
+
+	return taskModule.DockerResult{
+		Error: nil,
+		Action: "restart",
+		Result: "restart:success",
+	}
 }
 
 
