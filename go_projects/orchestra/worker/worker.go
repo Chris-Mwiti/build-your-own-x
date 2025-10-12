@@ -181,7 +181,6 @@ func (worker *Worker) StartTask(task *taskModule.Task)(taskModule.DockerResult){
 	dockerClient,err := taskModule.NewDocker(*taskCfg)
 	if err != nil {
 		log.Panicf("Panicing: Error while starting docker client %v", err)
-		//attempting to create a simple, reliable retry logic
 	}
 
 	task.StartTime = time.Now()
