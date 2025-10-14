@@ -256,8 +256,10 @@ func (manager *Manager) checkTaskHealth(task task.Task)(error){
 	log.Printf("Checking the task %v health : %s\n", task.ID, task.HealthCheck)
 	w := manager.TaskWorkerMap[task.ID]
 
+	//fetching of the hotspot
 	hostport := getHostPort(task.PortBindings)
 	wrk := strings.Split(w, ":")
+
 	url := fmt.Sprintf("http://%s:%s%s", wrk[0], *hostport, task.HealthCheck)
 	log.Printf("Calling health check for task")
 
